@@ -126,6 +126,29 @@
   transform: translateY(1px) scale(0.997);
 }
 
+.fs-login {
+  margin-top: 25px;
+  margin-left: 10px;
+  display: inline-block;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 10px;
+  background: #f97316;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14.5px;
+  cursor: pointer;
+  transition: transform 0.06s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 10px 20px rgba(239, 68, 68, 0.18);
+}
+
+.fs-login:hover {
+  background: #d95900;
+}
+.fs-login:active {
+  transform: translateY(1px) scale(0.997);
+}
+
 @media (max-width: 680px) {
   .fs-card {
     padding: 36px 22px 28px;

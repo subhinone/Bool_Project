@@ -129,6 +129,15 @@ export default function FireStationInfo() {
         >
           소방서 등록 &gt;
         </button>
+
+        <button
+          type="button"
+          className="fs-login"
+          onClick={() => Navigate("/login")}
+          aria-label="소방서 로그인 페이지로 이동"
+        >
+          로그인 &gt;
+        </button>
       </main>
     </div>
   );
