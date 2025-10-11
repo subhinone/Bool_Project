@@ -162,7 +162,7 @@ export default function FireStationRegister() {
         stationName={submitted.stationName}
         email={submitted.email}
         primaryText="대시보드로 이동"
-        onPrimary={() => navigate("/")}
+        onPrimary={() => navigate("/Dashboard")}
         onClose={() => setModalOpen(false)}
       />
     </div>

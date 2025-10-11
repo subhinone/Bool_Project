@@ -18,7 +18,7 @@ export default function Login() {
       ? `${form.emailLocal.trim()}@fire.go.kr`
       : "";
     console.log("LOGIN ::", { email, password: form.password });
-    navigate("/"); // ("/dashboard")
+    navigate("/dashboard");
   };
 
   return (
