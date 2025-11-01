@@ -68,6 +68,13 @@ export default function Dashboard() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(list[0]?.id);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [stationName, setStationName] = useState("용인시 소방서"); // 임시 기본값
+  
+  useEffect(() => {
+  // 로그인 시 저장된 소방서 정보 가져오기
+  const savedStationName = localStorage.getItem("stationName") || "소방서";
+  setStationName(savedStationName);
+}, []);
 
   const selected = useMemo(
     () => list.find((f) => f.id === selectedId) ?? list[0],
@@ -130,11 +137,14 @@ export default function Dashboard() {
     <div className="fd-wrap">
       <header className="fd-header" role="banner">
         <div className="fd-header-left">
-          <img src={logo119} alt="BOOL119" />
-          <h1>
-            용인시 소방서 <span className="fd-sub">실시간 신고 내역</span>
-          </h1>
-        </div>
+  <img src={logo119} alt="BOOL119" />
+  <h1>
+    {stationName}
+    <span className="fd-sub">
+      {activeTab === "active" ? "실시간 신고 내역" : "처리 내역"}
+    </span>
+  </h1>
+</div>
         <nav className="fd-tabs" aria-label="화면 전환">
           <button className="fd-logout-btn" onClick={handleLogout}>
             로그아웃
@@ -157,7 +167,9 @@ export default function Dashboard() {
       <div className="fd-grid">
         <aside className="fd-side" aria-label="화재 목록">
           <div className="fd-card fd-side-card">
-            <div className="fd-side-title">화재 목록</div>
+            <div className="fd-side-title">
+  {activeTab === "active" ? "화재 목록" : "처리 내역"}
+</div>
             <div className="fd-search">
               <input
                 value={query}

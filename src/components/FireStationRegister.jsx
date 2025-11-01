@@ -30,7 +30,8 @@ export default function FireStationRegister() {
     alert("이메일 인증 안내를 보냈습니다. (데모)");
   };
 
-  const handleSubmit = (e) => {
+  // [수정] 1. handleSubmit을 'async' 함수로 변경
+  const handleSubmit = async (e) => { 
     e.preventDefault();
     if (form.password !== form.password2) {
       alert("비밀번호가 일치하지 않습니다.");
@@ -49,13 +50,42 @@ export default function FireStationRegister() {
       password: form.password,
     };
 
-    console.log("REGISTER ::", payload);
+    // [수정] 2. 서버 없이 테스트하기 위해, API 호출 '전'에 localStorage에 저장
+    localStorage.setItem("stationName", payload.district); // '근무 관할지'를 'stationName'으로 저장
+    localStorage.setItem("district", payload.district);   // '근무 관할지'를 'district'로도 저장
 
+    // [수정] 3. console.log 대신 모달에 표시될 정보를 'district' 기준으로 설정
     setSubmitted({
-      stationName: form.district.trim() || form.orgCode.trim(),
+      stationName: payload.district, // 모달에도 '근무 관할지' 표시
       email,
     });
-    setModalOpen(true);
+    
+    // [수정] 4. 서버 통신 로직 추가
+    try {
+      // 실제 백엔드 서버의 회원가입 엔드포인트 URL
+      const API_URL = "http://localhost:3000/api/register"; 
+      
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload), // payload 전송
+      });
+
+      if (response.ok) {
+        // 서버 통신 성공 시 (실제 운영 환경)
+        setModalOpen(true);
+      } else {
+        // 서버 통신 실패 시 (서버가 켜져있으나 오류 발생)
+        console.warn("서버 응답 실패. (테스트 모드)");
+        setModalOpen(true); // 테스트를 위해 모달 열기
+      }
+    } catch (error) {
+      // 네트워크 오류 (서버가 꺼져있음)
+      console.error("Registration Error (무시 가능):", error);
+      setModalOpen(true); // 테스트를 위해 모달 열기
+    }
   };
 
   return (
