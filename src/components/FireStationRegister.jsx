@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./FireStationRegister.css";
-import logo119 from "../assets/bool119logo.png";
+import logo119 from "../assets/119_bool.png";
 import { useNavigate } from "react-router-dom";
 import RegisterSuccessModal from "./RegisterSuccessModal";
 

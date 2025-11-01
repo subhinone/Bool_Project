@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./Login.css";
-import logo119 from "../assets/bool119logo.png";
+import logo119 from "../assets/119_bool.png";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {

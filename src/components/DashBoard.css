@@ -139,7 +139,6 @@ body {
   padding-top: 8px;
 }
 
-/* 빈 상태 스타일 */
 .fd-empty {
   padding: 40px 20px;
   text-align: center;
@@ -432,7 +431,6 @@ body {
   border-color: #ddd;
 }
 
-/* 신고자 정보 빈 상태 */
 .fd-reporter-empty {
   background: #f9fafb;
   border: 1px dashed #e5e7eb;

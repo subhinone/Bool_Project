@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./DashBoard.css";
-import logo119 from "../assets/bool119logo.png";
+import logo119 from "../assets/119_bool.png";
 import CompleteModal from "./CompleteModal";
 
 const DUMMY = [
@@ -62,7 +62,7 @@ const DUMMY = [
 
 export default function Dashboard() {
   const [list, setList] = useState(DUMMY);
-  const [activeTab, setActiveTab] = useState("active"); // 'active' 또는 'history'
+  const [activeTab, setActiveTab] = useState("active");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(list[0]?.id);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -78,18 +78,15 @@ export default function Dashboard() {
     return () => clearInterval(t);
   }, []);
 
-  // 필터링 로직 수정
   const filtered = useMemo(() => {
     let result = list;
 
-    // 탭에 따른 필터링
     if (activeTab === "active") {
       result = result.filter((f) => f.status === "FIRE");
     } else {
       result = result.filter((f) => f.status === "DONE");
     }
 
-    // 검색어 필터링
     const q = query.trim();
     if (q) {
       result = result.filter((f) => f.title.includes(q));
@@ -98,17 +95,14 @@ export default function Dashboard() {
     return result;
   }, [list, query, activeTab]);
 
-  // 탭 전환 시 첫 번째 항목 자동 선택
   useEffect(() => {
     if (filtered.length > 0) {
-      // 현재 선택된 항목이 필터링된 목록에 없으면 첫 번째 항목 선택
       if (!filtered.find((f) => f.id === selectedId)) {
         setSelectedId(filtered[0].id);
       }
     }
   }, [filtered, selectedId]);
 
-  // 처리 완료 핸들러
   const handleComplete = () => {
     setList((prevList) =>
       prevList.map((item) =>
@@ -116,14 +110,12 @@ export default function Dashboard() {
       )
     );
 
-    // 모달 표시
     setShowCompleteModal(true);
   };
 
-  // 모달 확인 버튼 클릭 시
   const handleModalConfirm = () => {
     setShowCompleteModal(false);
-    // '처리 내역' 탭으로 전환
+
     setActiveTab("history");
   };
 
@@ -261,7 +253,6 @@ export default function Dashboard() {
                   <div className="fd-memo">{selected.memo}</div>
 
                   <div className="fd-actions">
-                    <button className="btn btn-ghost">취소</button>
                     <button
                       className="btn btn-primary"
                       onClick={handleComplete}

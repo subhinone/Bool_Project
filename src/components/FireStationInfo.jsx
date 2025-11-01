@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import "./FireStationInfo.css";
-import logo119 from "../assets/bool119logo.png";
+import logo119 from "../assets/119_bool.png";
 import fireBg from "../assets/fire-icon.png";
 
 const Step = ({ icon, label }) => (
