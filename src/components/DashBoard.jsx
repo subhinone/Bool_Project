@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./DashBoard.css";
 import logo119 from "../assets/bool119logo.png";
+import CompleteModal from "./CompleteModal";
 
 const DUMMY = [
   {
@@ -60,9 +61,12 @@ const DUMMY = [
 ];
 
 export default function Dashboard() {
-  const [list] = useState(DUMMY);
+  const [list, setList] = useState(DUMMY);
+  const [activeTab, setActiveTab] = useState("active"); // 'active' 또는 'history'
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(list[0]?.id);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+
   const selected = useMemo(
     () => list.find((f) => f.id === selectedId) ?? list[0],
     [list, selectedId]
@@ -74,11 +78,54 @@ export default function Dashboard() {
     return () => clearInterval(t);
   }, []);
 
+  // 필터링 로직 수정
   const filtered = useMemo(() => {
+    let result = list;
+
+    // 탭에 따른 필터링
+    if (activeTab === "active") {
+      result = result.filter((f) => f.status === "FIRE");
+    } else {
+      result = result.filter((f) => f.status === "DONE");
+    }
+
+    // 검색어 필터링
     const q = query.trim();
-    if (!q) return list;
-    return list.filter((f) => f.title.includes(q));
-  }, [list, query]);
+    if (q) {
+      result = result.filter((f) => f.title.includes(q));
+    }
+
+    return result;
+  }, [list, query, activeTab]);
+
+  // 탭 전환 시 첫 번째 항목 자동 선택
+  useEffect(() => {
+    if (filtered.length > 0) {
+      // 현재 선택된 항목이 필터링된 목록에 없으면 첫 번째 항목 선택
+      if (!filtered.find((f) => f.id === selectedId)) {
+        setSelectedId(filtered[0].id);
+      }
+    }
+  }, [filtered, selectedId]);
+
+  // 처리 완료 핸들러
+  const handleComplete = () => {
+    setList((prevList) =>
+      prevList.map((item) =>
+        item.id === selectedId ? { ...item, status: "DONE" } : item
+      )
+    );
+
+    // 모달 표시
+    setShowCompleteModal(true);
+  };
+
+  // 모달 확인 버튼 클릭 시
+  const handleModalConfirm = () => {
+    setShowCompleteModal(false);
+    // '처리 내역' 탭으로 전환
+    setActiveTab("history");
+  };
 
   return (
     <div className="fd-wrap">
@@ -90,8 +137,18 @@ export default function Dashboard() {
           </h1>
         </div>
         <nav className="fd-tabs" aria-label="화면 전환">
-          <button className="active">실시간 신고 내역</button>
-          <button>처리 내역</button>
+          <button
+            className={activeTab === "active" ? "active" : ""}
+            onClick={() => setActiveTab("active")}
+          >
+            실시간 신고 내역
+          </button>
+          <button
+            className={activeTab === "history" ? "active" : ""}
+            onClick={() => setActiveTab("history")}
+          >
+            처리 내역
+          </button>
         </nav>
       </header>
 
@@ -109,20 +166,33 @@ export default function Dashboard() {
             </div>
 
             <ul className="fd-list" role="listbox">
-              {filtered.map((f) => (
-                <li
-                  key={f.id}
-                  role="option"
-                  aria-selected={selectedId === f.id}
-                  className={`fd-list-item ${
-                    selectedId === f.id ? "is-active" : ""
-                  }`}
-                  onClick={() => setSelectedId(f.id)}
-                >
-                  <div className="fd-list-title">{f.title}</div>
-                  <div className="fd-list-meta">{f.minutesAgo} minutes ago</div>
-                </li>
-              ))}
+              {filtered.length > 0 ? (
+                filtered.map((f) => (
+                  <li
+                    key={f.id}
+                    role="option"
+                    aria-selected={selectedId === f.id}
+                    className={`fd-list-item ${
+                      selectedId === f.id ? "is-active" : ""
+                    }`}
+                    onClick={() => setSelectedId(f.id)}
+                  >
+                    <div className="fd-list-title">{f.title}</div>
+                    <div className="fd-list-meta">
+                      {f.minutesAgo} minutes ago
+                    </div>
+                  </li>
+                ))
+              ) : (
+                <div className="fd-empty">
+                  <div className="fd-empty-icon">📭</div>
+                  <div className="fd-empty-text">
+                    {activeTab === "active"
+                      ? "신고 내역이 없습니다"
+                      : "처리된 내역이 없습니다"}
+                  </div>
+                </div>
+              )}
             </ul>
 
             <div className="fd-pagination">1&nbsp;&nbsp;2&nbsp;&nbsp;3</div>
@@ -130,74 +200,98 @@ export default function Dashboard() {
         </aside>
 
         <main className="fd-main" role="main">
-          <div className="fd-card fd-main-card">
-            <div className="fd-main-head">
-              <div className="fd-main-title">
-                {selected.title}
-                <span className="fd-main-time">
-                  {selected.minutesAgo} minutes ago
-                </span>
+          {filtered.length > 0 ? (
+            <div className="fd-card fd-main-card">
+              <div className="fd-main-head">
+                <div className="fd-main-title">
+                  {selected.title}
+                  <span className="fd-main-time">
+                    {selected.minutesAgo} minutes ago
+                  </span>
+                </div>
+                <div
+                  className={`fd-badge ${
+                    selected.status === "DONE" ? "done" : "fire"
+                  }`}
+                >
+                  {selected.status === "DONE" ? "처리 완료" : "FIRE"}
+                </div>
               </div>
-              <div
-                className={`fd-badge ${
-                  selected.status === "DONE" ? "done" : "fire"
-                }`}
-              >
-                {selected.status === "DONE" ? "처리 완료" : "FIRE"}
+
+              <div className="fd-media">
+                <img src={selected.preview} alt="현장 영상/이미지" />
+              </div>
+
+              <div className="fd-main-bottom">
+                <section className="fd-map-card">
+                  <div className="fd-map-label">MAP</div>
+                  <div className="fd-map-box">
+                    <div className="fd-map-placeholder">지도 로딩 영역</div>
+                  </div>
+                </section>
+
+                <section className="fd-info">
+                  <ul className="fd-bullets">
+                    <li>
+                      <span className="k">신고자 위치</span>
+                      <span className="v">{selected.location}</span>
+                    </li>
+                    <li>
+                      <span className="k">바람</span>
+                      <span className="v">{selected.wind}</span>
+                    </li>
+                    <li>
+                      <span className="k">습도</span>
+                      <span className="v">{selected.humidity}</span>
+                    </li>
+                  </ul>
+
+                  <div className="fd-risk">
+                    <div className="fd-risk-label">
+                      <span>위험도</span>
+                      <strong>{selected.risk}%</strong>
+                    </div>
+                    <div className="fd-risk-bar">
+                      <div
+                        className="fd-risk-fill"
+                        style={{ width: `${selected.risk}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="fd-memo">{selected.memo}</div>
+
+                  <div className="fd-actions">
+                    <button className="btn btn-ghost">취소</button>
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleComplete}
+                      disabled={selected.status === "DONE"}
+                    >
+                      {selected.status === "DONE" ? "처리됨" : "처리 완료"}
+                    </button>
+                  </div>
+                </section>
               </div>
             </div>
-
-            <div className="fd-media">
-              <img src={selected.preview} alt="현장 영상/이미지" />
+          ) : (
+            <div className="fd-card fd-main-card fd-main-empty">
+              <div className="fd-empty-main">
+                <div className="fd-empty-icon-large">
+                  {activeTab === "active" ? "🔥" : "✅"}
+                </div>
+                <div className="fd-empty-title">
+                  {activeTab === "active"
+                    ? "현재 신고 내역이 없습니다"
+                    : "처리된 내역이 없습니다"}
+                </div>
+                <div className="fd-empty-desc">
+                  {activeTab === "active"
+                    ? "새로운 화재 신고가 들어오면 여기에 표시됩니다"
+                    : "처리 완료된 신고 내역이 여기에 표시됩니다"}
+                </div>
+              </div>
             </div>
-
-            <div className="fd-main-bottom">
-              <section className="fd-map-card">
-                <div className="fd-map-label">MAP</div>
-                <div className="fd-map-box">
-                  <div className="fd-map-placeholder">지도 로딩 영역</div>
-                </div>
-              </section>
-
-              <section className="fd-info">
-                <ul className="fd-bullets">
-                  <li>
-                    <span className="k">신고자 위치</span>
-                    <span className="v">{selected.location}</span>
-                  </li>
-                  <li>
-                    <span className="k">바람</span>
-                    <span className="v">{selected.wind}</span>
-                  </li>
-                  <li>
-                    <span className="k">습도</span>
-                    <span className="v">{selected.humidity}</span>
-                  </li>
-                </ul>
-
-                <div className="fd-risk">
-                  <div className="fd-risk-label">
-                    <span>위험도</span>
-                    <strong>{selected.risk}%</strong>
-                  </div>
-                  <div className="fd-risk-bar">
-                    <div
-                      className="fd-risk-fill"
-                      style={{ width: `${selected.risk}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="fd-memo">{selected.memo}</div>
-
-                <div className="fd-actions">
-                  <button className="btn btn-ghost">취소</button>
-                  <button className="btn btn-primary">
-                    {selected.status === "DONE" ? "처리됨" : "처리 완료"}
-                  </button>
-                </div>
-              </section>
-            </div>
-          </div>
+          )}
         </main>
 
         <aside className="fd-right">
@@ -219,27 +313,42 @@ export default function Dashboard() {
 
           <div className="fd-card fd-reporter">
             <div className="fd-reporter-title">신고자 정보</div>
-            <div className="fd-reporter-body">
-              <div className="fd-avatar" aria-hidden="true">
-                👤
+            {filtered.length > 0 ? (
+              <div className="fd-reporter-body">
+                <div className="fd-avatar" aria-hidden="true">
+                  👤
+                </div>
+                <div className="fd-field">
+                  <div className="label">이름</div>
+                  <div className="value">{selected.reporter.name}</div>
+                </div>
+                <div className="fd-field">
+                  <div className="label">전화번호</div>
+                  <div className="value">{selected.reporter.phone}</div>
+                </div>
+                <div className="fd-field">
+                  <div className="label">신고 내역</div>
+                  <div className="value">#{selected.reporter.reportId}</div>
+                </div>
+                <button className="btn btn-outline">버튼대신 내역</button>
               </div>
-              <div className="fd-field">
-                <div className="label">이름</div>
-                <div className="value">{selected.reporter.name}</div>
+            ) : (
+              <div className="fd-reporter-empty">
+                <div className="fd-empty-icon">👤</div>
+                <div className="fd-empty-text">신고자 정보가 없습니다</div>
               </div>
-              <div className="fd-field">
-                <div className="label">전화번호</div>
-                <div className="value">{selected.reporter.phone}</div>
-              </div>
-              <div className="fd-field">
-                <div className="label">신고 내역</div>
-                <div className="value">#{selected.reporter.reportId}</div>
-              </div>
-              <button className="btn btn-outline">버튼대신 내역</button>
-            </div>
+            )}
           </div>
         </aside>
       </div>
+
+      <CompleteModal
+        open={showCompleteModal}
+        fireTitle={selected?.title || ""}
+        onStay={() => setShowCompleteModal(false)}
+        onMoveToHistory={handleModalConfirm}
+        onClose={() => setShowCompleteModal(false)}
+      />
     </div>
   );
 }

@@ -139,6 +139,54 @@ body {
   padding-top: 8px;
 }
 
+/* 빈 상태 스타일 */
+.fd-empty {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.fd-empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.fd-empty-text {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.fd-main-empty {
+  display: grid;
+  place-items: center;
+  min-height: 500px;
+}
+
+.fd-empty-main {
+  text-align: center;
+  max-width: 360px;
+}
+
+.fd-empty-icon-large {
+  font-size: 72px;
+  margin-bottom: 20px;
+  opacity: 0.3;
+}
+
+.fd-empty-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.fd-empty-desc {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .fd-main-card {
   padding: 16px;
 }
@@ -299,6 +347,10 @@ body {
 .btn:active {
   transform: translateY(1px);
 }
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .btn-ghost {
   background: #f3f4f6;
   color: #6b7280;
@@ -312,7 +364,7 @@ body {
   border-color: var(--accent);
   box-shadow: 0 8px 18px rgba(239, 68, 68, 0.18);
 }
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: var(--accent-d);
   border-color: var(--accent-d);
 }
@@ -378,6 +430,26 @@ body {
 }
 .fd-reporter .btn-outline {
   border-color: #ddd;
+}
+
+/* 신고자 정보 빈 상태 */
+.fd-reporter-empty {
+  background: #f9fafb;
+  border: 1px dashed #e5e7eb;
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.fd-reporter-empty .fd-empty-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+  opacity: 0.3;
+}
+
+.fd-reporter-empty .fd-empty-text {
+  font-size: 13px;
+  color: var(--muted);
 }
 
 @media (max-width: 1060px) {
