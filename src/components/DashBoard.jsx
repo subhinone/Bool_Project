@@ -48,7 +48,7 @@ const DUMMY = [
     id: "f004",
     title: "용인시 남사면 화재",
     minutesAgo: 13,
-    status: "DONE",
+    status: "FIRE",
     preview:
       "https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200&auto=format&fit=crop",
     location: "경기 용인시 남사면 서촌로 3",
