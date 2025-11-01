@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./DashBoard.css";
 import logo119 from "../assets/119_bool.png";
 import CompleteModal from "./CompleteModal";
@@ -8,7 +9,7 @@ const DUMMY = [
     id: "f001",
     title: "처인구 남동 화재",
     minutesAgo: 2,
-    status: "FIRE", // or "DONE"
+    status: "FIRE",
     preview: "src/assets/dummy_fire1.png",
     location: "경기 용인시 처인구 명지로116",
     wind: "북풍 0.8m/s",
@@ -61,6 +62,7 @@ const DUMMY = [
 ];
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [list, setList] = useState(DUMMY);
   const [activeTab, setActiveTab] = useState("active");
   const [query, setQuery] = useState("");
@@ -115,8 +117,13 @@ export default function Dashboard() {
 
   const handleModalConfirm = () => {
     setShowCompleteModal(false);
-
     setActiveTab("history");
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("로그아웃 하시겠습니까?")) {
+      navigate("/login");
+    }
   };
 
   return (
@@ -129,6 +136,9 @@ export default function Dashboard() {
           </h1>
         </div>
         <nav className="fd-tabs" aria-label="화면 전환">
+          <button className="fd-logout-btn" onClick={handleLogout}>
+            로그아웃
+          </button>
           <button
             className={activeTab === "active" ? "active" : ""}
             onClick={() => setActiveTab("active")}
