@@ -19,6 +19,8 @@ export default function Login() {
 
     if (isLoading) return;
 
+    const emailLocal = form.emailLocal.trim();
+
     const email = form.emailLocal.trim()
       ? `${form.emailLocal.trim()}@fire.go.kr`
       : "";
@@ -33,12 +35,12 @@ export default function Login() {
     try {
       // API 유틸리티 함수 사용
       const userData = await login({
-        email,
+        username: emailLocal,
         password: form.password,
       });
 
       // 토큰 저장
-      if (userData.token) {
+      if (userData.accessToken) {
         saveToken(userData.token);
       }
 
