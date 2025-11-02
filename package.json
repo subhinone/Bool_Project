@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "setup": "node setup-network.js",
+    "dev": "npm run setup && vite",
+    "dev:local": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

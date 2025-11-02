@@ -9,8 +9,9 @@ export default function FireStationRegister() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    orgCode: "",
-    district: "",
+    stationCode: "",
+    stationName: "",
+    jurisdiction: "",
     emailLocal: "",
     password: "",
     password2: "",
@@ -54,14 +55,15 @@ export default function FireStationRegister() {
       ? `${form.emailLocal.trim()}@fire.go.kr`
       : "";
 
-    if (!form.orgCode.trim() || !form.district.trim() || !email) {
+    if (!form.stationCode.trim() || !form.stationName.trim() || !form.jurisdiction.trim() || !email) {
       alert("모든 필드를 입력해주세요.");
       return;
     }
 
     const payload = {
-      orgCode: form.orgCode.trim(),
-      district: form.district.trim(),
+      stationCode: form.stationCode.trim(),
+      stationName: form.stationName.trim(),
+      jurisdiction: form.jurisdiction.trim(),
       email,
       password: form.password,
     };
@@ -75,12 +77,12 @@ export default function FireStationRegister() {
       console.log("회원가입 성공:", result);
 
       // 성공 시 localStorage에 저장
-      localStorage.setItem("stationName", payload.district);
-      localStorage.setItem("district", payload.district);
+      localStorage.setItem("stationName", payload.stationName);
+      localStorage.setItem("jurisdiction", payload.jurisdiction);
 
       // 모달에 표시할 정보 설정
       setSubmitted({
-        stationName: payload.district,
+        stationName: payload.stationName,
         email,
       });
 
@@ -99,10 +101,10 @@ export default function FireStationRegister() {
         );
 
         // 테스트 모드: localStorage 저장 후 모달 표시
-        localStorage.setItem("stationName", payload.district);
-        localStorage.setItem("district", payload.district);
+        localStorage.setItem("stationName", payload.stationName);
+        localStorage.setItem("jurisdiction", payload.jurisdiction);
         setSubmitted({
-          stationName: payload.district,
+          stationName: payload.stationName,
           email,
         });
         setModalOpen(true);
@@ -130,9 +132,9 @@ export default function FireStationRegister() {
             <input
               className="fsr-input"
               type="text"
-              name="orgCode"
-              placeholder="소방서 기관 코드"
-              value={form.orgCode}
+              name="stationCode"
+              placeholder="소방서 코드 (예: FS-001)"
+              value={form.stationCode}
               onChange={handleChange}
               required
               disabled={isLoading}
@@ -143,9 +145,22 @@ export default function FireStationRegister() {
             <input
               className="fsr-input"
               type="text"
-              name="district"
-              placeholder="근무 관할지"
-              value={form.district}
+              name="stationName"
+              placeholder="소방서 이름 (예: 서울중앙소방서)"
+              value={form.stationName}
+              onChange={handleChange}
+              required
+              disabled={isLoading}
+            />
+          </label>
+
+          <label className="fsr-field">
+            <input
+              className="fsr-input"
+              type="text"
+              name="jurisdiction"
+              placeholder="관할 구역 (예: 서울시 중구)"
+              value={form.jurisdiction}
               onChange={handleChange}
               required
               disabled={isLoading}
