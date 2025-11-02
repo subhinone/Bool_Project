@@ -3,6 +3,7 @@ import "./FireStationRegister.css";
 import logo119 from "../assets/119_bool.png";
 import { useNavigate } from "react-router-dom";
 import RegisterSuccessModal from "./RegisterSuccessModal";
+import { registerFireStation } from "../utils/api";
 
 export default function FireStationRegister() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function FireStationRegister() {
     stationName: "",
     email: "",
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -27,21 +29,35 @@ export default function FireStationRegister() {
   };
 
   const handleVerifyEmail = () => {
+    if (!form.emailLocal.trim()) {
+      alert("이메일을 입력해주세요.");
+      return;
+    }
     alert("이메일 인증 안내를 보냈습니다. (데모)");
   };
 
-  // [수정] 1. handleSubmit을 'async' 함수로 변경
-  const handleSubmit = async (e) => { 
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // 유효성 검사
     if (form.password !== form.password2) {
       alert("비밀번호가 일치하지 않습니다.");
       return;
     }
 
-    const email =
-      form.emailLocal.trim() === ""
-        ? ""
-        : `${form.emailLocal.trim()}@fire.go.kr`;
+    if (form.password.length < 6) {
+      alert("비밀번호는 최소 6자 이상이어야 합니다.");
+      return;
+    }
+
+    const email = form.emailLocal.trim()
+      ? `${form.emailLocal.trim()}@fire.go.kr`
+      : "";
+
+    if (!form.orgCode.trim() || !form.district.trim() || !email) {
+      alert("모든 필드를 입력해주세요.");
+      return;
+    }
 
     const payload = {
       orgCode: form.orgCode.trim(),
@@ -50,41 +66,55 @@ export default function FireStationRegister() {
       password: form.password,
     };
 
-    // [수정] 2. 서버 없이 테스트하기 위해, API 호출 '전'에 localStorage에 저장
-    localStorage.setItem("stationName", payload.district); // '근무 관할지'를 'stationName'으로 저장
-    localStorage.setItem("district", payload.district);   // '근무 관할지'를 'district'로도 저장
+    setIsLoading(true);
 
-    // [수정] 3. console.log 대신 모달에 표시될 정보를 'district' 기준으로 설정
-    setSubmitted({
-      stationName: payload.district, // 모달에도 '근무 관할지' 표시
-      email,
-    });
-    
-    // [수정] 4. 서버 통신 로직 추가
     try {
-      // 실제 백엔드 서버의 회원가입 엔드포인트 URL
-      const API_URL = "http://localhost:3000/api/register"; 
-      
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload), // payload 전송
+      // API 유틸리티 함수 사용
+      const result = await registerFireStation(payload);
+
+      console.log("회원가입 성공:", result);
+
+      // 성공 시 localStorage에 저장
+      localStorage.setItem("stationName", payload.district);
+      localStorage.setItem("district", payload.district);
+
+      // 모달에 표시할 정보 설정
+      setSubmitted({
+        stationName: payload.district,
+        email,
       });
 
-      if (response.ok) {
-        // 서버 통신 성공 시 (실제 운영 환경)
-        setModalOpen(true);
-      } else {
-        // 서버 통신 실패 시 (서버가 켜져있으나 오류 발생)
-        console.warn("서버 응답 실패. (테스트 모드)");
-        setModalOpen(true); // 테스트를 위해 모달 열기
-      }
+      // 성공 모달 표시
+      setModalOpen(true);
     } catch (error) {
-      // 네트워크 오류 (서버가 꺼져있음)
-      console.error("Registration Error (무시 가능):", error);
-      setModalOpen(true); // 테스트를 위해 모달 열기
+      console.error("회원가입 오류:", error);
+
+      if (error.status === 0) {
+        // 서버 연결 실패
+        alert(
+          "서버에 연결할 수 없습니다.\n" +
+            "백엔드 서버가 실행 중인지 확인해주세요.\n" +
+            "(http://localhost:3000)\n\n" +
+            "테스트를 위해 계속 진행하시겠습니까?"
+        );
+
+        // 테스트 모드: localStorage 저장 후 모달 표시
+        localStorage.setItem("stationName", payload.district);
+        localStorage.setItem("district", payload.district);
+        setSubmitted({
+          stationName: payload.district,
+          email,
+        });
+        setModalOpen(true);
+      } else if (error.status === 409) {
+        // 이미 존재하는 이메일
+        alert("이미 등록된 이메일입니다.");
+      } else {
+        // 기타 오류
+        alert(error.message || "회원가입 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -105,6 +135,7 @@ export default function FireStationRegister() {
               value={form.orgCode}
               onChange={handleChange}
               required
+              disabled={isLoading}
             />
           </label>
 
@@ -117,6 +148,7 @@ export default function FireStationRegister() {
               value={form.district}
               onChange={handleChange}
               required
+              disabled={isLoading}
             />
           </label>
 
@@ -131,6 +163,7 @@ export default function FireStationRegister() {
                   value={form.emailLocal}
                   onChange={handleChange}
                   aria-describedby="email-suffix"
+                  disabled={isLoading}
                 />
                 <span id="email-suffix" className="fsr-email-suffix">
                   @fire.go.kr
@@ -140,6 +173,7 @@ export default function FireStationRegister() {
                 type="button"
                 className="fsr-btn fsr-btn-verify"
                 onClick={handleVerifyEmail}
+                disabled={isLoading}
               >
                 인증
               </button>
@@ -156,6 +190,7 @@ export default function FireStationRegister() {
               onChange={handleChange}
               required
               minLength={6}
+              disabled={isLoading}
             />
           </label>
 
@@ -169,6 +204,7 @@ export default function FireStationRegister() {
               onChange={handleChange}
               required
               minLength={6}
+              disabled={isLoading}
             />
           </label>
 
@@ -177,11 +213,16 @@ export default function FireStationRegister() {
               type="button"
               className="fsr-btn fsr-btn-ghost"
               onClick={() => navigate(-1)}
+              disabled={isLoading}
             >
               취소
             </button>
-            <button type="submit" className="fsr-btn fsr-btn-primary">
-              등록하기
+            <button
+              type="submit"
+              className="fsr-btn fsr-btn-primary"
+              disabled={isLoading}
+            >
+              {isLoading ? "등록 중..." : "등록하기"}
             </button>
           </div>
         </form>
@@ -192,7 +233,7 @@ export default function FireStationRegister() {
         stationName={submitted.stationName}
         email={submitted.email}
         primaryText="대시보드로 이동"
-        onPrimary={() => navigate("/Dashboard")}
+        onPrimary={() => navigate("/dashboard")}
         onClose={() => setModalOpen(false)}
       />
     </div>

@@ -1,72 +1,80 @@
 import React, { useState } from "react";
 import "./Login.css";
-import logo119 from "../assets/119_bool.png"; // <--- 이 부분은 올바르게 수정하셨네요!
+import logo119 from "../assets/119_bool.png";
 import { useNavigate } from "react-router-dom";
+import { login, saveToken } from "../utils/api";
 
 export default function Login() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ emailLocal: "", password: "" });
+  const [isLoading, setIsLoading] = useState(false);
 
   const onChange = (e) => {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
   };
 
-  // [수정] onSubmit 함수를 'async'로 변경해야 await를 사용할 수 있습니다.
   const onSubmit = async (e) => {
     e.preventDefault();
+
+    if (isLoading) return;
+
     const email = form.emailLocal.trim()
       ? `${form.emailLocal.trim()}@fire.go.kr`
       : "";
 
-    // [추가] API 요청에 필요한 payload 변수를 정의합니다. (기존 코드에 누락됨)
-    const payload = { email, password: form.password };
+    if (!email || !form.password) {
+      alert("이메일과 비밀번호를 모두 입력해주세요.");
+      return;
+    }
 
-    // --- [수정] 서버 통신 로직 (try...catch)을 onSubmit 함수 *내부*로 이동시켰습니다. ---
+    setIsLoading(true);
+
     try {
-      // 실제 백엔드 서버의 로그인 엔드포인트 URL로 변경해야 합니다.
-      const API_URL = "http://localhost:3000/api/login";
-
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload), // [수정] 정의된 payload 사용
+      // API 유틸리티 함수 사용
+      const userData = await login({
+        email,
+        password: form.password,
       });
 
-      if (response.ok) {
-        // 로그인 성공 처리
-        const userData = await response.json();
-
-        // [수정] API 응답에서 실제 데이터를 저장합니다. (기존 더미 코드 대체)
-        localStorage.setItem("stationName", userData.stationName || "용인시 소방서");
-        localStorage.setItem("authToken", userData.token); // 예: 토큰 저장
-
-        console.log("Login Success. User Data/Token:", userData);
-        alert("로그인 성공!");
-        navigate("/dashboard");
-      } else {
-        // 인증 실패 (예: 비밀번호 불일치, 사용자 없음)
-        const errorData = await response.json();
-        alert(
-          `로그인 실패: ${
-            errorData.message || "이메일 또는 비밀번호를 확인해주세요."
-          }`
-        );
+      // 토큰 저장
+      if (userData.token) {
+        saveToken(userData.token);
       }
+
+      // 사용자 정보 저장
+      localStorage.setItem("stationName", userData.stationName || "소방서");
+      localStorage.setItem("district", userData.district || "");
+      localStorage.setItem("userId", userData.id || "");
+
+      console.log("로그인 성공:", userData);
+      alert("로그인 성공!");
+      navigate("/dashboard");
     } catch (error) {
-      // 네트워크 오류 처리
-      console.error("Login Error:", error);
-      alert("네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      console.error("로그인 오류:", error);
+
+      if (error.status === 0) {
+        // 서버 연결 실패
+        alert(
+          "서버에 연결할 수 없습니다.\n" +
+            "백엔드 서버가 실행 중인지 확인해주세요.\n" +
+            "(http://localhost:3000)"
+        );
+      } else if (error.status === 401) {
+        // 인증 실패
+        alert("이메일 또는 비밀번호가 올바르지 않습니다.");
+      } else {
+        // 기타 오류
+        alert(error.message || "로그인 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setIsLoading(false);
     }
-    // --- 서버 통신 로직 끝 ---
-  }; // <--- [수정] onSubmit 함수가 여기서 닫힙니다. (기존 코드는 이 괄호가 잘못된 위치에 있었습니다)
+  };
 
   return (
     <div className="login-wrap">
       <main className="login-card" role="main" aria-labelledby="login-title">
-        {/* 로고 경로가 올바르게 반영되었습니다. */}
         <img className="login-logo" src={logo119} alt="불119 로고" />
 
         <form className="login-form" onSubmit={onSubmit}>
@@ -80,6 +88,7 @@ export default function Login() {
                 value={form.emailLocal}
                 onChange={onChange}
                 aria-describedby="login-email-suffix"
+                disabled={isLoading}
               />
               <span id="login-email-suffix" className="login-email-suffix">
                 @fire.go.kr
@@ -97,6 +106,7 @@ export default function Login() {
               onChange={onChange}
               required
               minLength={6}
+              disabled={isLoading}
             />
           </label>
 
@@ -105,11 +115,16 @@ export default function Login() {
               type="button"
               className="login-btn login-btn-ghost"
               onClick={() => navigate(-1)}
+              disabled={isLoading}
             >
               취소
             </button>
-            <button type="submit" className="login-btn login-btn-primary">
-              로그인
+            <button
+              type="submit"
+              className="login-btn login-btn-primary"
+              disabled={isLoading}
+            >
+              {isLoading ? "로그인 중..." : "로그인"}
             </button>
           </div>
         </form>
