@@ -116,7 +116,7 @@ export default function Login() {
             <button
               type="button"
               className="login-btn login-btn-ghost"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/")}
               disabled={isLoading}
             >
               취소

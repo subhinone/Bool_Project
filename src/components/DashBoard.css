@@ -458,7 +458,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  flex-grow: 1;  /* 추가 */
+  flex-grow: 1;
 }
 .fd-reporter-title {
   font-weight: 900;
@@ -473,9 +473,9 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  flex-grow: 1;  /* 추가 */
-  width: 100%;  /* 추가 */
-  justify-content: center;  /* 추가 */
+  flex-grow: 1;
+  width: 100%;
+  justify-content: center;
 }
 .fd-avatar {
   width: 84px;
