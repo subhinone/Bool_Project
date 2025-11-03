@@ -1,80 +1,84 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "./DashBoard.css";
-import logo119 from "../assets/119_bool.png";
-import CompleteModal from "./CompleteModal";
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './DashBoard.css';
+import logo119 from '../assets/119_bool.png';
+import CompleteModal from './CompleteModal';
+import { Map, MapMarker } from 'react-kakao-maps-sdk';
 
 const DUMMY = [
   {
-    id: "f001",
-    title: "처인구 남동 화재",
+    id: 'f001',
+    title: '처인구 남동 화재',
     minutesAgo: 2,
-    status: "FIRE",
-    preview: "src/assets/dummy_fire1.png",
-    location: "경기 용인시 처인구 명지로116",
-    wind: "북풍 0.8m/s",
-    humidity: "84%",
+    status: 'FIRE',
+    preview: 'src/assets/dummy_fire1.png',
+    location: '경기 용인시 처인구 명지로116',
+    coordinates: { lat: 37.2411, lng: 127.2017 }, // 카카오맵 좌표
+    wind: '북풍 0.8m/s',
+    humidity: '84%',
     risk: 83,
-    reporter: { name: "박민규", phone: "010-0000-0000", reportId: "21" },
-    memo: "근처 주차장에 연기 다량 발생. 가연물(박스) 주변 확산 우려.",
+    reporter: { name: '박민규', phone: '010-0000-0000', reportId: '21' },
+    memo: '근처 주차장에 연기 다량 발생. 가연물(박스) 주변 확산 우려.',
   },
   {
-    id: "f002",
-    title: "처인구 역북동 화재",
+    id: 'f002',
+    title: '처인구 역북동 화재',
     minutesAgo: 4,
-    status: "FIRE",
-    preview: "src/assets/dummy_fire2.png",
-    location: "경기 용인시 처인구 역북동 571-1",
-    wind: "서풍 1.2m/s",
-    humidity: "66%",
+    status: 'FIRE',
+    preview: 'src/assets/dummy_fire2.png',
+    location: '경기 용인시 처인구 역북동 571-1',
+    coordinates: { lat: 37.238, lng: 127.211 },
+    wind: '서풍 1.2m/s',
+    humidity: '66%',
     risk: 71,
-    reporter: { name: "이유신", phone: "010-2222-3333", reportId: "22" },
-    memo: "간판 전기 스파크 의심. 초기 진화 필요.",
+    reporter: { name: '이유신', phone: '010-2222-3333', reportId: '22' },
+    memo: '간판 전기 스파크 의심. 초기 진화 필요.',
   },
   {
-    id: "f003",
-    title: "용인시 모현면 화재",
+    id: 'f003',
+    title: '용인시 모현면 화재',
     minutesAgo: 8,
-    status: "FIRE",
+    status: 'FIRE',
     preview:
-      "https://images.unsplash.com/photo-1520409364225-92729ee9b0ad?q=80&w=1200&auto=format&fit=crop",
-    location: "경기 용인시 모현면 금강로 7",
-    wind: "남풍 0.5m/s",
-    humidity: "72%",
+      'https://images.unsplash.com/photo-1520409364225-92729ee9b0ad?q=80&w=1200&auto=format&fit=crop',
+    location: '경기 용인시 모현면 금강로 7',
+    coordinates: { lat: 37.282, lng: 127.247 },
+    wind: '남풍 0.5m/s',
+    humidity: '72%',
     risk: 58,
-    reporter: { name: "최수빈", phone: "010-5555-9999", reportId: "23" },
-    memo: "산책로 인근 낙엽 훈소.",
+    reporter: { name: '최수빈', phone: '010-5555-9999', reportId: '23' },
+    memo: '산책로 인근 낙엽 훈소.',
   },
   {
-    id: "f004",
-    title: "용인시 남사면 화재",
+    id: 'f004',
+    title: '용인시 남사면 화재',
     minutesAgo: 13,
-    status: "FIRE",
+    status: 'FIRE',
     preview:
-      "https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200&auto=format&fit=crop",
-    location: "경기 용인시 남사면 서촌로 3",
-    wind: "북서풍 1.0m/s",
-    humidity: "77%",
+      'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200&auto=format&fit=crop',
+    location: '경기 용인시 남사면 서촌로 3',
+    coordinates: { lat: 37.135, lng: 127.189 },
+    wind: '북서풍 1.0m/s',
+    humidity: '77%',
     risk: 35,
-    reporter: { name: "함종호", phone: "010-7777-0000", reportId: "24" },
-    memo: "작은 쓰레기더미, 현장 정리 완료.",
+    reporter: { name: '함종호', phone: '010-7777-0000', reportId: '24' },
+    memo: '작은 쓰레기더미, 현장 정리 완료.',
   },
 ];
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [list, setList] = useState(DUMMY);
-  const [activeTab, setActiveTab] = useState("active");
-  const [query, setQuery] = useState("");
+  const [activeTab, setActiveTab] = useState('active');
+  const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(list[0]?.id);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [stationName, setStationName] = useState("용인시 소방서"); // 임시 기본값
-  
+  const [stationName, setStationName] = useState('용인시 소방서');
+
   useEffect(() => {
-  // 로그인 시 저장된 소방서 정보 가져오기
-  const savedStationName = localStorage.getItem("stationName") || "소방서";
-  setStationName(savedStationName);
-}, []);
+    const savedStationName = localStorage.getItem('stationName') || '소방서';
+    setStationName(savedStationName);
+  }, []);
 
   const selected = useMemo(
     () => list.find((f) => f.id === selectedId) ?? list[0],
@@ -90,10 +94,10 @@ export default function Dashboard() {
   const filtered = useMemo(() => {
     let result = list;
 
-    if (activeTab === "active") {
-      result = result.filter((f) => f.status === "FIRE");
+    if (activeTab === 'active') {
+      result = result.filter((f) => f.status === 'FIRE');
     } else {
-      result = result.filter((f) => f.status === "DONE");
+      result = result.filter((f) => f.status === 'DONE');
     }
 
     const q = query.trim();
@@ -115,7 +119,7 @@ export default function Dashboard() {
   const handleComplete = () => {
     setList((prevList) =>
       prevList.map((item) =>
-        item.id === selectedId ? { ...item, status: "DONE" } : item
+        item.id === selectedId ? { ...item, status: 'DONE' } : item
       )
     );
 
@@ -124,12 +128,12 @@ export default function Dashboard() {
 
   const handleModalConfirm = () => {
     setShowCompleteModal(false);
-    setActiveTab("history");
+    setActiveTab('history');
   };
 
   const handleLogout = () => {
-    if (window.confirm("로그아웃 하시겠습니까?")) {
-      navigate("/login");
+    if (window.confirm('로그아웃 하시겠습니까?')) {
+      navigate('/login');
     }
   };
 
@@ -137,27 +141,27 @@ export default function Dashboard() {
     <div className="fd-wrap">
       <header className="fd-header" role="banner">
         <div className="fd-header-left">
-  <img src={logo119} alt="BOOL119" />
-  <h1>
-    {stationName}
-    <span className="fd-sub">
-      {activeTab === "active" ? "실시간 신고 내역" : "처리 내역"}
-    </span>
-  </h1>
-</div>
+          <img src={logo119} alt="BOOL119" />
+          <h1>
+            {stationName}
+            <span className="fd-sub">
+              {activeTab === 'active' ? '실시간 신고 내역' : '처리 내역'}
+            </span>
+          </h1>
+        </div>
         <nav className="fd-tabs" aria-label="화면 전환">
           <button className="fd-logout-btn" onClick={handleLogout}>
             로그아웃
           </button>
           <button
-            className={activeTab === "active" ? "active" : ""}
-            onClick={() => setActiveTab("active")}
+            className={activeTab === 'active' ? 'active' : ''}
+            onClick={() => setActiveTab('active')}
           >
             실시간 신고 내역
           </button>
           <button
-            className={activeTab === "history" ? "active" : ""}
-            onClick={() => setActiveTab("history")}
+            className={activeTab === 'history' ? 'active' : ''}
+            onClick={() => setActiveTab('history')}
           >
             처리 내역
           </button>
@@ -168,8 +172,8 @@ export default function Dashboard() {
         <aside className="fd-side" aria-label="화재 목록">
           <div className="fd-card fd-side-card">
             <div className="fd-side-title">
-  {activeTab === "active" ? "화재 목록" : "처리 내역"}
-</div>
+              {activeTab === 'active' ? '화재 목록' : '처리 내역'}
+            </div>
             <div className="fd-search">
               <input
                 value={query}
@@ -187,7 +191,7 @@ export default function Dashboard() {
                     role="option"
                     aria-selected={selectedId === f.id}
                     className={`fd-list-item ${
-                      selectedId === f.id ? "is-active" : ""
+                      selectedId === f.id ? 'is-active' : ''
                     }`}
                     onClick={() => setSelectedId(f.id)}
                   >
@@ -201,9 +205,9 @@ export default function Dashboard() {
                 <div className="fd-empty">
                   <div className="fd-empty-icon">📭</div>
                   <div className="fd-empty-text">
-                    {activeTab === "active"
-                      ? "신고 내역이 없습니다"
-                      : "처리된 내역이 없습니다"}
+                    {activeTab === 'active'
+                      ? '신고 내역이 없습니다'
+                      : '처리된 내역이 없습니다'}
                   </div>
                 </div>
               )}
@@ -225,10 +229,10 @@ export default function Dashboard() {
                 </div>
                 <div
                   className={`fd-badge ${
-                    selected.status === "DONE" ? "done" : "fire"
+                    selected.status === 'DONE' ? 'done' : 'fire'
                   }`}
                 >
-                  {selected.status === "DONE" ? "처리 완료" : "FIRE"}
+                  {selected.status === 'DONE' ? '처리 완료' : 'FIRE'}
                 </div>
               </div>
 
@@ -240,7 +244,33 @@ export default function Dashboard() {
                 <section className="fd-map-card">
                   <div className="fd-map-label">MAP</div>
                   <div className="fd-map-box">
-                    <div className="fd-map-placeholder">지도 로딩 영역</div>
+                    {selected.coordinates ? (
+                      <Map
+                        center={{
+                          lat: selected.coordinates.lat,
+                          lng: selected.coordinates.lng,
+                        }}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          borderRadius: '10px',
+                        }}
+                        level={3}
+                      >
+                        <MapMarker
+                          position={{
+                            lat: selected.coordinates.lat,
+                            lng: selected.coordinates.lng,
+                          }}
+                          image={{
+                            src: 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png',
+                            size: { width: 24, height: 35 },
+                          }}
+                        />
+                      </Map>
+                    ) : (
+                      <div className="fd-map-placeholder">위치 정보 없음</div>
+                    )}
                   </div>
                 </section>
 
@@ -278,9 +308,9 @@ export default function Dashboard() {
                     <button
                       className="btn btn-primary"
                       onClick={handleComplete}
-                      disabled={selected.status === "DONE"}
+                      disabled={selected.status === 'DONE'}
                     >
-                      {selected.status === "DONE" ? "처리됨" : "처리 완료"}
+                      {selected.status === 'DONE' ? '처리됨' : '처리 완료'}
                     </button>
                   </div>
                 </section>
@@ -290,17 +320,17 @@ export default function Dashboard() {
             <div className="fd-card fd-main-card fd-main-empty">
               <div className="fd-empty-main">
                 <div className="fd-empty-icon-large">
-                  {activeTab === "active" ? "🔥" : "✅"}
+                  {activeTab === 'active' ? '🔥' : '✅'}
                 </div>
                 <div className="fd-empty-title">
-                  {activeTab === "active"
-                    ? "현재 신고 내역이 없습니다"
-                    : "처리된 내역이 없습니다"}
+                  {activeTab === 'active'
+                    ? '현재 신고 내역이 없습니다'
+                    : '처리된 내역이 없습니다'}
                 </div>
                 <div className="fd-empty-desc">
-                  {activeTab === "active"
-                    ? "새로운 화재 신고가 들어오면 여기에 표시됩니다"
-                    : "처리 완료된 신고 내역이 여기에 표시됩니다"}
+                  {activeTab === 'active'
+                    ? '새로운 화재 신고가 들어오면 여기에 표시됩니다'
+                    : '처리 완료된 신고 내역이 여기에 표시됩니다'}
                 </div>
               </div>
             </div>
@@ -311,15 +341,15 @@ export default function Dashboard() {
           <div className="fd-card fd-clock" aria-live="polite">
             <div className="fd-clock-icon">🕑</div>
             <div className="fd-clock-date">
-              {now.getFullYear().toString().slice(2)}년{" "}
-              {(now.getMonth() + 1).toString().padStart(2, "0")}월{" "}
-              {now.getDate().toString().padStart(2, "0")}일
+              {now.getFullYear().toString().slice(2)}년{' '}
+              {(now.getMonth() + 1).toString().padStart(2, '0')}월{' '}
+              {now.getDate().toString().padStart(2, '0')}일
             </div>
             <div className="fd-clock-time">
-              {now.toLocaleTimeString("ko-KR", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
+              {now.toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
               })}
             </div>
           </div>
@@ -357,7 +387,7 @@ export default function Dashboard() {
 
       <CompleteModal
         open={showCompleteModal}
-        fireTitle={selected?.title || ""}
+        fireTitle={selected?.title || ''}
         onStay={() => setShowCompleteModal(false)}
         onMoveToHistory={handleModalConfirm}
         onClose={() => setShowCompleteModal(false)}
