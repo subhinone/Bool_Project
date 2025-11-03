@@ -1,82 +1,93 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import './DashBoard.css';
-import logo119 from '../assets/119_bool.png';
-import CompleteModal from './CompleteModal';
-import { Map, MapMarker } from 'react-kakao-maps-sdk';
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "./DashBoard.css";
+import logo119 from "../assets/119_bool.png";
+import CompleteModal from "./CompleteModal";
+import { Map, MapMarker } from "react-kakao-maps-sdk";
 
 const DUMMY = [
   {
-    id: 'f001',
-    title: '처인구 남동 화재',
+    id: "f001",
+    title: "처인구 남동 화재",
     minutesAgo: 2,
-    status: 'FIRE',
-    preview: 'src/assets/dummy_fire1.png',
-    location: '경기 용인시 처인구 명지로116',
+    status: "FIRE",
+    preview: "src/assets/dummy_fire1.png",
+    location: "경기 용인시 처인구 명지로116",
     coordinates: { lat: 37.2411, lng: 127.2017 }, // 카카오맵 좌표
-    wind: '북풍 0.8m/s',
-    humidity: '84%',
+    wind: "북풍 0.8m/s",
+    humidity: "84%",
     risk: 83,
-    reporter: { name: '박민규', phone: '010-0000-0000', reportId: '21' },
-    memo: '근처 주차장에 연기 다량 발생. 가연물(박스) 주변 확산 우려.',
+    reporter: { name: "박민규", phone: "010-0000-0000", reportId: "21" },
+    memo: "근처 주차장에 연기 다량 발생. 가연물(박스) 주변 확산 우려.",
   },
   {
-    id: 'f002',
-    title: '처인구 역북동 화재',
+    id: "f002",
+    title: "처인구 역북동 화재",
     minutesAgo: 4,
-    status: 'FIRE',
-    preview: 'src/assets/dummy_fire2.png',
-    location: '경기 용인시 처인구 역북동 571-1',
+    status: "FIRE",
+    preview: "src/assets/dummy_fire2.png",
+    location: "경기 용인시 처인구 역북동 571-1",
     coordinates: { lat: 37.238, lng: 127.211 },
-    wind: '서풍 1.2m/s',
-    humidity: '66%',
+    wind: "서풍 1.2m/s",
+    humidity: "66%",
     risk: 71,
-    reporter: { name: '이유신', phone: '010-2222-3333', reportId: '22' },
-    memo: '간판 전기 스파크 의심. 초기 진화 필요.',
+    reporter: { name: "이유신", phone: "010-2222-3333", reportId: "22" },
+    memo: "간판 전기 스파크 의심. 초기 진화 필요.",
   },
   {
-    id: 'f003',
-    title: '용인시 모현면 화재',
+    id: "f003",
+    title: "용인시 모현면 화재",
     minutesAgo: 8,
-    status: 'FIRE',
+    status: "FIRE",
     preview:
-      'https://images.unsplash.com/photo-1520409364225-92729ee9b0ad?q=80&w=1200&auto=format&fit=crop',
-    location: '경기 용인시 모현면 금강로 7',
+      "https://images.unsplash.com/photo-1520409364225-92729ee9b0ad?q=80&w=1200&auto=format&fit=crop",
+    location: "경기 용인시 모현면 금강로 7",
     coordinates: { lat: 37.282, lng: 127.247 },
-    wind: '남풍 0.5m/s',
-    humidity: '72%',
+    wind: "남풍 0.5m/s",
+    humidity: "72%",
     risk: 58,
-    reporter: { name: '최수빈', phone: '010-5555-9999', reportId: '23' },
-    memo: '산책로 인근 낙엽 훈소.',
+    reporter: { name: "최수빈", phone: "010-5555-9999", reportId: "23" },
+    memo: "산책로 인근 낙엽 훈소.",
   },
   {
-    id: 'f004',
-    title: '용인시 남사면 화재',
+    id: "f004",
+    title: "용인시 남사면 화재",
     minutesAgo: 13,
-    status: 'FIRE',
+    status: "FIRE",
     preview:
-      'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200&auto=format&fit=crop',
-    location: '경기 용인시 남사면 서촌로 3',
+      "https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200&auto=format&fit=crop",
+    location: "경기 용인시 남사면 서촌로 3",
     coordinates: { lat: 37.135, lng: 127.189 },
-    wind: '북서풍 1.0m/s',
-    humidity: '77%',
+    wind: "북서풍 1.0m/s",
+    humidity: "77%",
     risk: 35,
-    reporter: { name: '함종호', phone: '010-7777-0000', reportId: '24' },
-    memo: '작은 쓰레기더미, 현장 정리 완료.',
+    reporter: { name: "함종호", phone: "010-7777-0000", reportId: "24" },
+    memo: "작은 쓰레기더미, 현장 정리 완료.",
   },
 ];
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [list, setList] = useState(DUMMY);
-  const [activeTab, setActiveTab] = useState('active');
-  const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState("active");
+  const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(list[0]?.id);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [stationName, setStationName] = useState('용인시 소방서');
+  const [stationName, setStationName] = useState("용인시 소방서");
+
+  // [LOG] 컴포넌트가 처음 마운트될 때 Kakao SDK 존재 여부 출력
+  useEffect(() => {
+    console.log("[MAP] Dashboard mounted");
+    console.log("[MAP] window.kakao 존재?", !!window.kakao);
+    if (!window.kakao) {
+      console.warn(
+        "[MAP] window.kakao가 없습니다. SDK가 아직 안 불러와진 상태일 수 있어요."
+      );
+    }
+  }, []);
 
   useEffect(() => {
-    const savedStationName = localStorage.getItem('stationName') || '소방서';
+    const savedStationName = localStorage.getItem("stationName") || "소방서";
     setStationName(savedStationName);
   }, []);
 
@@ -84,6 +95,12 @@ export default function Dashboard() {
     () => list.find((f) => f.id === selectedId) ?? list[0],
     [list, selectedId]
   );
+
+  // [LOG] 선택된 신고 / 좌표가 바뀔 때마다 출력
+  useEffect(() => {
+    console.log("[MAP] 선택된 신고:", selected?.id, selected?.title);
+    console.log("[MAP] 선택된 좌표:", selected?.coordinates);
+  }, [selected]);
 
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -94,10 +111,10 @@ export default function Dashboard() {
   const filtered = useMemo(() => {
     let result = list;
 
-    if (activeTab === 'active') {
-      result = result.filter((f) => f.status === 'FIRE');
+    if (activeTab === "active") {
+      result = result.filter((f) => f.status === "FIRE");
     } else {
-      result = result.filter((f) => f.status === 'DONE');
+      result = result.filter((f) => f.status === "DONE");
     }
 
     const q = query.trim();
@@ -119,7 +136,7 @@ export default function Dashboard() {
   const handleComplete = () => {
     setList((prevList) =>
       prevList.map((item) =>
-        item.id === selectedId ? { ...item, status: 'DONE' } : item
+        item.id === selectedId ? { ...item, status: "DONE" } : item
       )
     );
 
@@ -128,14 +145,17 @@ export default function Dashboard() {
 
   const handleModalConfirm = () => {
     setShowCompleteModal(false);
-    setActiveTab('history');
+    setActiveTab("history");
   };
 
   const handleLogout = () => {
-    if (window.confirm('로그아웃 하시겠습니까?')) {
-      navigate('/login');
+    if (window.confirm("로그아웃 하시겠습니까?")) {
+      navigate("/login");
     }
   };
+
+  // [LOG] 렌더링될 때마다 현재 선택된 좌표 한번 더 찍어보기
+  console.log("[MAP] render - selected coords:", selected?.coordinates);
 
   return (
     <div className="fd-wrap">
@@ -145,7 +165,7 @@ export default function Dashboard() {
           <h1>
             {stationName}
             <span className="fd-sub">
-              {activeTab === 'active' ? '실시간 신고 내역' : '처리 내역'}
+              {activeTab === "active" ? "실시간 신고 내역" : "처리 내역"}
             </span>
           </h1>
         </div>
@@ -154,14 +174,14 @@ export default function Dashboard() {
             로그아웃
           </button>
           <button
-            className={activeTab === 'active' ? 'active' : ''}
-            onClick={() => setActiveTab('active')}
+            className={activeTab === "active" ? "active" : ""}
+            onClick={() => setActiveTab("active")}
           >
             실시간 신고 내역
           </button>
           <button
-            className={activeTab === 'history' ? 'active' : ''}
-            onClick={() => setActiveTab('history')}
+            className={activeTab === "history" ? "active" : ""}
+            onClick={() => setActiveTab("history")}
           >
             처리 내역
           </button>
@@ -172,7 +192,7 @@ export default function Dashboard() {
         <aside className="fd-side" aria-label="화재 목록">
           <div className="fd-card fd-side-card">
             <div className="fd-side-title">
-              {activeTab === 'active' ? '화재 목록' : '처리 내역'}
+              {activeTab === "active" ? "화재 목록" : "처리 내역"}
             </div>
             <div className="fd-search">
               <input
@@ -191,7 +211,7 @@ export default function Dashboard() {
                     role="option"
                     aria-selected={selectedId === f.id}
                     className={`fd-list-item ${
-                      selectedId === f.id ? 'is-active' : ''
+                      selectedId === f.id ? "is-active" : ""
                     }`}
                     onClick={() => setSelectedId(f.id)}
                   >
@@ -205,9 +225,9 @@ export default function Dashboard() {
                 <div className="fd-empty">
                   <div className="fd-empty-icon">📭</div>
                   <div className="fd-empty-text">
-                    {activeTab === 'active'
-                      ? '신고 내역이 없습니다'
-                      : '처리된 내역이 없습니다'}
+                    {activeTab === "active"
+                      ? "신고 내역이 없습니다"
+                      : "처리된 내역이 없습니다"}
                   </div>
                 </div>
               )}
@@ -229,15 +249,26 @@ export default function Dashboard() {
                 </div>
                 <div
                   className={`fd-badge ${
-                    selected.status === 'DONE' ? 'done' : 'fire'
+                    selected.status === "DONE" ? "done" : "fire"
                   }`}
                 >
-                  {selected.status === 'DONE' ? '처리 완료' : 'FIRE'}
+                  {selected.status === "DONE" ? "처리 완료" : "FIRE"}
                 </div>
               </div>
 
               <div className="fd-media">
-                <img src={selected.preview} alt="현장 영상/이미지" />
+                {/* [LOG] 이미지 로드/에러도 같이 확인 */}
+                <img
+                  src={selected.preview}
+                  alt="현장 영상/이미지"
+                  onLoad={() =>
+                    console.log("[IMG] preview 로드 성공:", selected.preview)
+                  }
+                  onError={(e) => {
+                    console.error("[IMG] preview 로드 실패:", selected.preview);
+                    console.error(e.nativeEvent);
+                  }}
+                />
               </div>
 
               <div className="fd-main-bottom">
@@ -251,11 +282,20 @@ export default function Dashboard() {
                           lng: selected.coordinates.lng,
                         }}
                         style={{
-                          width: '100%',
-                          height: '100%',
-                          borderRadius: '10px',
+                          width: "100%",
+                          height: "100%",
+                          borderRadius: "10px",
                         }}
                         level={3}
+                        // [LOG] 실제 카카오 맵 인스턴스가 생성됐는지 확인
+                        onCreate={(map) => {
+                          console.log("[MAP] Map onCreate 호출됨");
+                          console.log(
+                            "[MAP] 현재 center:",
+                            map.getCenter().getLat(),
+                            map.getCenter().getLng()
+                          );
+                        }}
                       >
                         <MapMarker
                           position={{
@@ -263,8 +303,15 @@ export default function Dashboard() {
                             lng: selected.coordinates.lng,
                           }}
                           image={{
-                            src: 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png',
+                            src: "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png",
                             size: { width: 24, height: 35 },
+                          }}
+                          // [LOG] 마커도 생성되는지 확인
+                          onCreate={(marker) => {
+                            console.log(
+                              "[MAP] MapMarker onCreate 호출됨",
+                              marker
+                            );
                           }}
                         />
                       </Map>
@@ -308,9 +355,9 @@ export default function Dashboard() {
                     <button
                       className="btn btn-primary"
                       onClick={handleComplete}
-                      disabled={selected.status === 'DONE'}
+                      disabled={selected.status === "DONE"}
                     >
-                      {selected.status === 'DONE' ? '처리됨' : '처리 완료'}
+                      {selected.status === "DONE" ? "처리됨" : "처리 완료"}
                     </button>
                   </div>
                 </section>
@@ -320,17 +367,17 @@ export default function Dashboard() {
             <div className="fd-card fd-main-card fd-main-empty">
               <div className="fd-empty-main">
                 <div className="fd-empty-icon-large">
-                  {activeTab === 'active' ? '🔥' : '✅'}
+                  {activeTab === "active" ? "🔥" : "✅"}
                 </div>
                 <div className="fd-empty-title">
-                  {activeTab === 'active'
-                    ? '현재 신고 내역이 없습니다'
-                    : '처리된 내역이 없습니다'}
+                  {activeTab === "active"
+                    ? "현재 신고 내역이 없습니다"
+                    : "처리된 내역이 없습니다"}
                 </div>
                 <div className="fd-empty-desc">
-                  {activeTab === 'active'
-                    ? '새로운 화재 신고가 들어오면 여기에 표시됩니다'
-                    : '처리 완료된 신고 내역이 여기에 표시됩니다'}
+                  {activeTab === "active"
+                    ? "새로운 화재 신고가 들어오면 여기에 표시됩니다"
+                    : "처리 완료된 신고 내역이 여기에 표시됩니다"}
                 </div>
               </div>
             </div>
@@ -341,15 +388,15 @@ export default function Dashboard() {
           <div className="fd-card fd-clock" aria-live="polite">
             <div className="fd-clock-icon">🕑</div>
             <div className="fd-clock-date">
-              {now.getFullYear().toString().slice(2)}년{' '}
-              {(now.getMonth() + 1).toString().padStart(2, '0')}월{' '}
-              {now.getDate().toString().padStart(2, '0')}일
+              {now.getFullYear().toString().slice(2)}년{" "}
+              {(now.getMonth() + 1).toString().padStart(2, "0")}월{" "}
+              {now.getDate().toString().padStart(2, "0")}일
             </div>
             <div className="fd-clock-time">
-              {now.toLocaleTimeString('ko-KR', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
+              {now.toLocaleTimeString("ko-KR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
               })}
             </div>
           </div>
@@ -387,7 +434,7 @@ export default function Dashboard() {
 
       <CompleteModal
         open={showCompleteModal}
-        fireTitle={selected?.title || ''}
+        fireTitle={selected?.title || ""}
         onStay={() => setShowCompleteModal(false)}
         onMoveToHistory={handleModalConfirm}
         onClose={() => setShowCompleteModal(false)}
