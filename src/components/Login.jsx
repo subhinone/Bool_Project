@@ -33,21 +33,30 @@ export default function Login() {
     setIsLoading(true);
 
     try {
+      // 이메일 형식 검증
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        alert("올바른 이메일 형식을 입력해주세요. (예: user@fire.go.kr)");
+        setIsLoading(false);
+        return;
+      }
+
       // API 유틸리티 함수 사용
+      // 백엔드는 email과 password만 받음 (username 필드 사용하지 않음)
       const userData = await login({
-        username: emailLocal,
+        email: email.trim().toLowerCase(), // 완전한 이메일 주소 전송
         password: form.password,
       });
 
-      // 토큰 저장
-      if (userData.accessToken) {
-        saveToken(userData.token);
+      // 토큰 저장 (백엔드는 access_token을 반환)
+      if (userData.access_token) {
+        saveToken(userData.access_token);
       }
 
-      // 사용자 정보 저장
-      localStorage.setItem("stationName", userData.stationName || "소방서");
-      localStorage.setItem("district", userData.district || "");
-      localStorage.setItem("userId", userData.id || "");
+      // 사용자 정보 저장 (백엔드는 station 객체 안에 정보를 반환)
+      localStorage.setItem("stationName", userData.station?.station_name || "소방서");
+      localStorage.setItem("jurisdiction", userData.station?.jurisdiction || "");
+      localStorage.setItem("userId", userData.station?.id || "");
 
       console.log("로그인 성공:", userData);
       alert("로그인 성공!");
@@ -62,6 +71,14 @@ export default function Login() {
             "백엔드 서버가 실행 중인지 확인해주세요.\n" +
             "(http://localhost:3000)"
         );
+      } else if (error.status === 400) {
+        // Validation 에러 (400 Bad Request)
+        const errorMessages = error.data?.message || error.message;
+        if (Array.isArray(errorMessages)) {
+          alert("입력 오류:\n" + errorMessages.join("\n"));
+        } else {
+          alert(errorMessages || "입력한 정보를 확인해주세요.");
+        }
       } else if (error.status === 401) {
         // 인증 실패
         alert("이메일 또는 비밀번호가 올바르지 않습니다.");

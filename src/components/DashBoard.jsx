@@ -3,78 +3,133 @@ import { useNavigate } from "react-router-dom";
 import "./DashBoard.css";
 import logo119 from "../assets/119_bool.png";
 import CompleteModal from "./CompleteModal";
+import { getActiveFires, getCompletedFires, updateFireStatus, getToken } from "../utils/api";
 
-const DUMMY = [
-  {
-    id: "f001",
-    title: "처인구 남동 화재",
-    minutesAgo: 2,
-    status: "FIRE",
-    preview: "src/assets/dummy_fire1.png",
-    location: "경기 용인시 처인구 명지로116",
-    wind: "북풍 0.8m/s",
-    humidity: "84%",
-    risk: 83,
-    reporter: { name: "박민규", phone: "010-0000-0000", reportId: "21" },
-    memo: "근처 주차장에 연기 다량 발생. 가연물(박스) 주변 확산 우려.",
-  },
-  {
-    id: "f002",
-    title: "처인구 역북동 화재",
-    minutesAgo: 4,
-    status: "FIRE",
-    preview: "src/assets/dummy_fire2.png",
-    location: "경기 용인시 처인구 역북동 571-1",
-    wind: "서풍 1.2m/s",
-    humidity: "66%",
-    risk: 71,
-    reporter: { name: "이유신", phone: "010-2222-3333", reportId: "22" },
-    memo: "간판 전기 스파크 의심. 초기 진화 필요.",
-  },
-  {
-    id: "f003",
-    title: "용인시 모현면 화재",
-    minutesAgo: 8,
-    status: "FIRE",
-    preview:
-      "https://images.unsplash.com/photo-1520409364225-92729ee9b0ad?q=80&w=1200&auto=format&fit=crop",
-    location: "경기 용인시 모현면 금강로 7",
-    wind: "남풍 0.5m/s",
-    humidity: "72%",
-    risk: 58,
-    reporter: { name: "최수빈", phone: "010-5555-9999", reportId: "23" },
-    memo: "산책로 인근 낙엽 훈소.",
-  },
-  {
-    id: "f004",
-    title: "용인시 남사면 화재",
-    minutesAgo: 13,
-    status: "FIRE",
-    preview:
-      "https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200&auto=format&fit=crop",
-    location: "경기 용인시 남사면 서촌로 3",
-    wind: "북서풍 1.0m/s",
-    humidity: "77%",
-    risk: 35,
-    reporter: { name: "함종호", phone: "010-7777-0000", reportId: "24" },
-    memo: "작은 쓰레기더미, 현장 정리 완료.",
-  },
-];
+// Base64 이미지를 표시 가능한 URL로 변환하는 헬퍼 함수
+const getImageUrl = (base64String) => {
+  if (!base64String) return null;
+  
+  // 이미 data: URL 형식인 경우 그대로 반환
+  if (base64String.startsWith('data:')) {
+    return base64String;
+  }
+  
+  // Base64 문자열인 경우 data: URL 형식으로 변환
+  // JPEG는 /9j/4AAQ... 로 시작
+  if (base64String.startsWith('/9j/') || base64String.startsWith('iVBOR')) {
+    // JPEG 또는 PNG로 추정
+    const isPng = base64String.startsWith('iVBOR');
+    return `data:image/${isPng ? 'png' : 'jpeg'};base64,${base64String}`;
+  }
+  
+  // 기본적으로 JPEG로 처리
+  return `data:image/jpeg;base64,${base64String}`;
+};
+
+// 백엔드 데이터를 웹앱 형식으로 변환
+const transformReport = (report) => {
+  const createdAt = new Date(report.created_at);
+  const now = new Date();
+  const diffMinutes = Math.floor((now - createdAt) / (1000 * 60));
+  
+  return {
+    id: report.id,
+    title: report.address || `화재 신고 #${report.id}`,
+    minutesAgo: diffMinutes,
+    status: report.status === 'resolved' ? 'DONE' : 'FIRE',
+    preview: getImageUrl(report.annotated_image), // Base64 이미지 변환
+    location: report.address,
+    wind: report.wind_direction && report.wind_speed 
+      ? `${report.wind_direction} ${report.wind_speed}m/s`
+      : '-',
+    humidity: report.humidity ? `${Math.round(report.humidity)}%` : '-',
+    risk: Math.round(report.confidence || 0),
+    reporter: {
+      name: report.user_name || '알 수 없음',
+      phone: report.user_phone || '-',
+      reportId: report.id.toString()
+    },
+    memo: `${report.fire_type || 'unknown'} 화재 (신뢰도: ${Math.round(report.confidence || 0)}%)`,
+    // 원본 데이터도 함께 저장
+    _raw: report
+  };
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [list, setList] = useState(DUMMY);
+  const [list, setList] = useState([]);
   const [activeTab, setActiveTab] = useState("active");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState(list[0]?.id);
+  const [selectedId, setSelectedId] = useState(null);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [stationName, setStationName] = useState("용인시 소방서"); // 임시 기본값
+  const [stationName, setStationName] = useState("용인시 소방서");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   useEffect(() => {
-  // 로그인 시 저장된 소방서 정보 가져오기
-  const savedStationName = localStorage.getItem("stationName") || "소방서";
-  setStationName(savedStationName);
-}, []);
+    // 인증 토큰 확인
+    const token = getToken();
+    if (!token) {
+      alert("로그인이 필요합니다.");
+      navigate("/login");
+      return;
+    }
+
+    // 로그인 시 저장된 소방서 정보 가져오기
+    const savedStationName = localStorage.getItem("stationName") || "소방서";
+    setStationName(savedStationName);
+
+    // 화재 신고 목록 로드
+    loadReports();
+  }, [navigate]);
+  
+  const loadReports = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (activeTab === "active") {
+        const response = await getActiveFires();
+        const reports = response.reports || [];
+        const transformed = reports.map(transformReport);
+        setList(transformed);
+        
+        if (transformed.length > 0 && !selectedId) {
+          setSelectedId(transformed[0].id);
+        }
+      } else {
+        const response = await getCompletedFires();
+        const reports = response.reports || [];
+        const transformed = reports.map(transformReport);
+        setList(transformed);
+        
+        if (transformed.length > 0 && !selectedId) {
+          setSelectedId(transformed[0].id);
+        }
+      }
+    } catch (err) {
+      console.error("화재 신고 로드 실패:", err);
+
+      // 401 에러면 로그인 페이지로 리다이렉트
+      if (err.status === 401) {
+        alert("인증이 만료되었습니다. 다시 로그인해주세요.");
+        navigate("/login");
+        return;
+      }
+
+      setError(err.message || "데이터를 불러올 수 없습니다.");
+      // 에러 발생 시 빈 목록 표시
+      setList([]);
+      setSelectedId(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // 탭 변경 시 데이터 다시 로드
+  useEffect(() => {
+    loadReports();
+  }, [activeTab]);
 
   const selected = useMemo(
     () => list.find((f) => f.id === selectedId) ?? list[0],
@@ -112,14 +167,25 @@ export default function Dashboard() {
     }
   }, [filtered, selectedId]);
 
-  const handleComplete = () => {
-    setList((prevList) =>
-      prevList.map((item) =>
-        item.id === selectedId ? { ...item, status: "DONE" } : item
-      )
-    );
+  const handleComplete = async () => {
+    if (!selectedId) return;
+    
+    try {
+      // 백엔드에 상태 업데이트 요청
+      await updateFireStatus(selectedId, 'resolved');
+      
+      // 로컬 상태 업데이트
+      setList((prevList) =>
+        prevList.map((item) =>
+          item.id === selectedId ? { ...item, status: "DONE" } : item
+        )
+      );
 
-    setShowCompleteModal(true);
+      setShowCompleteModal(true);
+    } catch (err) {
+      console.error("처리 완료 실패:", err);
+      alert("처리 완료 중 오류가 발생했습니다: " + (err.message || "알 수 없는 오류"));
+    }
   };
 
   const handleModalConfirm = () => {
@@ -214,7 +280,22 @@ export default function Dashboard() {
         </aside>
 
         <main className="fd-main" role="main">
-          {filtered.length > 0 ? (
+          {loading ? (
+            <div className="fd-card fd-main-card fd-main-empty">
+              <div className="fd-empty-main">
+                <div className="fd-empty-icon-large">⏳</div>
+                <div className="fd-empty-title">데이터 로딩 중...</div>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="fd-card fd-main-card fd-main-empty">
+              <div className="fd-empty-main">
+                <div className="fd-empty-icon-large">⚠️</div>
+                <div className="fd-empty-title">오류 발생</div>
+                <div className="fd-empty-desc">{error}</div>
+              </div>
+            </div>
+          ) : filtered.length > 0 && selected ? (
             <div className="fd-card fd-main-card">
               <div className="fd-main-head">
                 <div className="fd-main-title">
@@ -233,7 +314,28 @@ export default function Dashboard() {
               </div>
 
               <div className="fd-media">
-                <img src={selected.preview} alt="현장 영상/이미지" />
+                {selected.preview ? (
+                  <img 
+                    src={selected.preview} 
+                    alt="현장 영상/이미지"
+                    onError={(e) => {
+                      // 이미지 로드 실패 시 플레이스홀더 표시
+                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIiBmaWxsPSIjOTk5Ij5JbWFnZSBOb3QgQXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
+                    }}
+                  />
+                ) : (
+                  <div style={{ 
+                    width: '100%', 
+                    height: '300px', 
+                    backgroundColor: '#ddd', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    color: '#999'
+                  }}>
+                    이미지 없음
+                  </div>
+                )}
               </div>
 
               <div className="fd-main-bottom">
