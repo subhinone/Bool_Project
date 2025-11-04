@@ -39,8 +39,7 @@ const DUMMY = [
     title: '용인시 모현면 화재',
     minutesAgo: 8,
     status: 'FIRE',
-    preview:
-      'https://images.unsplash.com/photo-1520409364225-92729ee9b0ad?q=80&w=1200&auto=format&fit=crop',
+    preview: 'src/assets/dummy_fire3.jpg',
     location: '경기 용인시 모현면 금강로 7',
     coordinates: { lat: 37.282, lng: 127.247 },
     wind: '남풍 0.5m/s',
@@ -54,8 +53,7 @@ const DUMMY = [
     title: '용인시 남사면 화재',
     minutesAgo: 13,
     status: 'FIRE',
-    preview:
-      'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200&auto=format&fit=crop',
+    preview: 'src/assets/dummy_fire4.jpg',
     location: '경기 용인시 남사면 서촌로 3',
     coordinates: { lat: 37.135, lng: 127.189 },
     wind: '북서풍 1.0m/s',
