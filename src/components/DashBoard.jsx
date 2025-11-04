@@ -73,6 +73,17 @@ export default function Dashboard() {
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [stationName, setStationName] = useState('용인시 소방서');
 
+  // [LOG] 컴포넌트가 처음 마운트될 때 Kakao SDK 존재 여부 출력
+  useEffect(() => {
+    console.log('[MAP] Dashboard mounted');
+    console.log('[MAP] window.kakao 존재?', !!window.kakao);
+    if (!window.kakao) {
+      console.warn(
+        '[MAP] window.kakao가 없습니다. SDK가 아직 안 불러와진 상태일 수 있어요.'
+      );
+    }
+  }, []);
+
   useEffect(() => {
     const savedStationName = localStorage.getItem('stationName') || '소방서';
     setStationName(savedStationName);
@@ -82,6 +93,12 @@ export default function Dashboard() {
     () => list.find((f) => f.id === selectedId) ?? list[0],
     [list, selectedId]
   );
+
+  // [LOG] 선택된 신고 / 좌표가 바뀔 때마다 출력
+  useEffect(() => {
+    console.log('[MAP] 선택된 신고:', selected?.id, selected?.title);
+    console.log('[MAP] 선택된 좌표:', selected?.coordinates);
+  }, [selected]);
 
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -134,6 +151,9 @@ export default function Dashboard() {
       navigate('/login');
     }
   };
+
+  // [LOG] 렌더링될 때마다 현재 선택된 좌표 한번 더 찍어보기
+  console.log('[MAP] render - selected coords:', selected?.coordinates);
 
   return (
     <div className="fd-wrap">
@@ -235,7 +255,18 @@ export default function Dashboard() {
               </div>
 
               <div className="fd-media">
-                <img src={selected.preview} alt="현장 영상/이미지" />
+                {/* [LOG] 이미지 로드/에러도 같이 확인 */}
+                <img
+                  src={selected.preview}
+                  alt="현장 영상/이미지"
+                  onLoad={() =>
+                    console.log('[IMG] preview 로드 성공:', selected.preview)
+                  }
+                  onError={(e) => {
+                    console.error('[IMG] preview 로드 실패:', selected.preview);
+                    console.error(e.nativeEvent);
+                  }}
+                />
               </div>
 
               <div className="fd-main-bottom">
@@ -254,6 +285,15 @@ export default function Dashboard() {
                           borderRadius: '10px',
                         }}
                         level={3}
+                        // [LOG] 실제 카카오 맵 인스턴스가 생성됐는지 확인
+                        onCreate={(map) => {
+                          console.log('[MAP] Map onCreate 호출됨');
+                          console.log(
+                            '[MAP] 현재 center:',
+                            map.getCenter().getLat(),
+                            map.getCenter().getLng()
+                          );
+                        }}
                       >
                         <MapMarker
                           position={{
@@ -263,6 +303,13 @@ export default function Dashboard() {
                           image={{
                             src: 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png',
                             size: { width: 24, height: 35 },
+                          }}
+                          // [LOG] 마커도 생성되는지 확인
+                          onCreate={(marker) => {
+                            console.log(
+                              '[MAP] MapMarker onCreate 호출됨',
+                              marker
+                            );
                           }}
                         />
                       </Map>
