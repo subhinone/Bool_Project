@@ -102,7 +102,7 @@ export const getActiveFires = async (params = {}) => {
   // 활성 화재만 필터링 (pending, dispatched)
   if (response.reports) {
     response.reports = response.reports.filter(
-      report => report.status === 'pending' || report.status === 'dispatched'
+      (report) => report.status === "pending" || report.status === "dispatched"
     );
   }
 
@@ -112,7 +112,7 @@ export const getActiveFires = async (params = {}) => {
 // 처리 완료 화재 목록 조회
 // Backend: GET /api/station/reports?status=resolved
 export const getCompletedFires = async (params = {}) => {
-  const queryParams = { ...params, status: 'resolved' };
+  const queryParams = { ...params, status: "resolved" };
   const queryString = new URLSearchParams(queryParams).toString();
   const endpoint = `/station/reports?${queryString}`;
   return apiRequest(endpoint);
@@ -135,12 +135,12 @@ export const updateFireStatus = async (fireId, status) => {
 
 // 화재 처리 완료 (resolved로 상태 변경)
 export const completeFire = async (fireId) => {
-  return updateFireStatus(fireId, 'resolved');
+  return updateFireStatus(fireId, "resolved");
 };
 
 // 화재 출동 중으로 변경 (dispatched로 상태 변경)
 export const dispatchFire = async (fireId) => {
-  return updateFireStatus(fireId, 'dispatched');
+  return updateFireStatus(fireId, "dispatched");
 };
 
 // ==================== 사용자 정보 관련 API ====================
