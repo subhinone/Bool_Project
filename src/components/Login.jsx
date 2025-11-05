@@ -1,12 +1,12 @@
-import React, { useState } from "react";
-import "./Login.css";
-import logo119 from "../assets/119_bool.png";
-import { useNavigate } from "react-router-dom";
-import { login, saveToken } from "../utils/api";
+import React, { useState } from 'react';
+import './Login.css';
+import logo119 from '../assets/119_bool.png';
+import { useNavigate } from 'react-router-dom';
+import { login, saveToken } from '../utils/api';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ emailLocal: "", password: "" });
+  const [form, setForm] = useState({ emailLocal: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
 
   const onChange = (e) => {
@@ -23,10 +23,10 @@ export default function Login() {
 
     const email = form.emailLocal.trim()
       ? `${form.emailLocal.trim()}@fire.go.kr`
-      : "";
+      : '';
 
     if (!email || !form.password) {
-      alert("이메일과 비밀번호를 모두 입력해주세요.");
+      alert('이메일과 비밀번호를 모두 입력해주세요.');
       return;
     }
 
@@ -36,7 +36,7 @@ export default function Login() {
       // 이메일 형식 검증
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        alert("올바른 이메일 형식을 입력해주세요. (예: user@fire.go.kr)");
+        alert('올바른 이메일 형식을 입력해주세요. (예: user@fire.go.kr)');
         setIsLoading(false);
         return;
       }
@@ -54,37 +54,42 @@ export default function Login() {
       }
 
       // 사용자 정보 저장 (백엔드는 station 객체 안에 정보를 반환)
-      localStorage.setItem("stationName", userData.station?.station_name || "소방서");
-      localStorage.setItem("jurisdiction", userData.station?.jurisdiction || "");
-      localStorage.setItem("userId", userData.station?.id || "");
+      localStorage.setItem(
+        'stationName',
+        userData.station?.station_name || '소방서'
+      );
+      localStorage.setItem(
+        'jurisdiction',
+        userData.station?.jurisdiction || ''
+      );
+      localStorage.setItem('userId', userData.station?.id || '');
 
-      console.log("로그인 성공:", userData);
-      alert("로그인 성공!");
-      navigate("/dashboard");
+      console.log('로그인 성공:', userData);
+      alert('로그인 성공!');
+      navigate('/dashboard');
     } catch (error) {
-      console.error("로그인 오류:", error);
+      console.error('로그인 오류:', error);
 
       if (error.status === 0) {
         // 서버 연결 실패
         alert(
-          "서버에 연결할 수 없습니다.\n" +
-            "백엔드 서버가 실행 중인지 확인해주세요.\n" +
-            "(http://localhost:3000)"
+          '서버에 연결할 수 없습니다.\n' +
+            '백엔드 서버가 실행 중인지 확인해주세요.\n'
         );
       } else if (error.status === 400) {
         // Validation 에러 (400 Bad Request)
         const errorMessages = error.data?.message || error.message;
         if (Array.isArray(errorMessages)) {
-          alert("입력 오류:\n" + errorMessages.join("\n"));
+          alert('입력 오류:\n' + errorMessages.join('\n'));
         } else {
-          alert(errorMessages || "입력한 정보를 확인해주세요.");
+          alert(errorMessages || '입력한 정보를 확인해주세요.');
         }
       } else if (error.status === 401) {
         // 인증 실패
-        alert("이메일 또는 비밀번호가 올바르지 않습니다.");
+        alert('이메일 또는 비밀번호가 올바르지 않습니다.');
       } else {
         // 기타 오류
-        alert(error.message || "로그인 중 오류가 발생했습니다.");
+        alert(error.message || '로그인 중 오류가 발생했습니다.');
       }
     } finally {
       setIsLoading(false);
@@ -133,7 +138,7 @@ export default function Login() {
             <button
               type="button"
               className="login-btn login-btn-ghost"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/')}
               disabled={isLoading}
             >
               취소
@@ -143,7 +148,7 @@ export default function Login() {
               className="login-btn login-btn-primary"
               disabled={isLoading}
             >
-              {isLoading ? "로그인 중..." : "로그인"}
+              {isLoading ? '로그인 중...' : '로그인'}
             </button>
           </div>
         </form>
