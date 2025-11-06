@@ -43,13 +43,38 @@ function setupEnvFile() {
   const localIP = getLocalIP();
   const backendPort = 3000;
 
+  // 기존 .env 파일 읽기 (존재하는 경우)
+  let kakaoMapKey = '';
+  let weatherApiKey = '';
+  let apiBase = '';
+  let fileBase = '';
+
+  if (fs.existsSync(envPath)) {
+    const existingContent = fs.readFileSync(envPath, 'utf8');
+    const kakaoMatch = existingContent.match(/VITE_KAKAOMAP_APP_KEY=(.+)/);
+    const weatherMatch = existingContent.match(/VITE_WEATHER_API_KEY=(.+)/);
+    const apiBaseMatch = existingContent.match(/VITE_API_BASE=(.+)/);
+    const fileBaseMatch = existingContent.match(/VITE_FILE_BASE=(.+)/);
+
+    if (kakaoMatch) kakaoMapKey = kakaoMatch[1].trim();
+    if (weatherMatch) weatherApiKey = weatherMatch[1].trim();
+    if (apiBaseMatch) apiBase = apiBaseMatch[1].trim();
+    if (fileBaseMatch) fileBase = fileBaseMatch[1].trim();
+  }
+
+  // AWS 서버 주소가 설정되어 있으면 유지, 없으면 로컬 네트워크 IP 사용
+  const defaultApiBase = apiBase || `http://${localIP}:${backendPort}/api`;
+  const defaultFileBase = fileBase || `http://${localIP}:${backendPort}/`;
+
   const envContent = `# Auto-generated .env file
 # This file is automatically created by setup-network.js
 # Run 'npm run setup' to regenerate this file
 
-# 백엔드 API 주소 (로컬 네트워크 IP)
-VITE_API_BASE=http://${localIP}:${backendPort}/api
-VITE_FILE_BASE=http://${localIP}:${backendPort}/
+# 백엔드 API 주소
+VITE_API_BASE=${defaultApiBase}
+VITE_FILE_BASE=${defaultFileBase}
+VITE_KAKAOMAP_APP_KEY=${kakaoMapKey || '57446d64905fa28b047405cf38138cad'}
+VITE_WEATHER_API_KEY=${weatherApiKey || '34cbc6daffd0aa8823a0113e1093ee967f661ada33889aa9f7a32aeea4eb0778'}
 `;
 
   fs.writeFileSync(envPath, envContent, 'utf8');

@@ -31,7 +31,7 @@ const transformReport = (report) => {
   const createdAt = new Date(report.created_at);
   const now = new Date();
   const diffMinutes = Math.floor((now - createdAt) / (1000 * 60));
-  
+
   return {
     id: report.id,
     title: report.address || `화재 신고 #${report.id}`,
@@ -39,7 +39,9 @@ const transformReport = (report) => {
     status: report.status === 'resolved' ? 'DONE' : 'FIRE',
     preview: getImageUrl(report.annotated_image), // Base64 이미지 변환
     location: report.address,
-    wind: report.wind_direction && report.wind_speed 
+    latitude: report.latitude,
+    longitude: report.longitude,
+    wind: report.wind_direction && report.wind_speed
       ? `${report.wind_direction} ${report.wind_speed}m/s`
       : '-',
     humidity: report.humidity ? `${Math.round(report.humidity)}%` : '-',
@@ -56,6 +58,8 @@ const transformReport = (report) => {
 };
 
 export default function Dashboard() {
+  console.log("[DashBoard] 컴포넌트 렌더링");
+
   const navigate = useNavigate();
   const [list, setList] = useState([]);
   const [activeTab, setActiveTab] = useState("active");
@@ -65,7 +69,120 @@ export default function Dashboard() {
   const [stationName, setStationName] = useState("용인시 소방서");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+  const [map, setMap] = useState(null);
+  const [marker, setMarker] = useState(null);
+  const [kakaoLoaded, setKakaoLoaded] = useState(false);
+
+  // 카카오 지도 스크립트 확인 및 로드
+  useEffect(() => {
+    console.log("[지도] 카카오 맵 로딩 확인 시작");
+    console.log("[지도] window.kakao:", window.kakao);
+
+    let attempts = 0;
+    const maxAttempts = 50; // 최대 5초 대기 (100ms * 50)
+    let scriptElement = null;
+
+    // 카카오 지도가 로드될 때까지 대기
+    const checkKakaoMaps = () => {
+      attempts++;
+
+      if (window.kakao && window.kakao.maps) {
+        console.log("[지도] ✅ 카카오 지도가 준비되었습니다!");
+        setKakaoLoaded(true);
+      } else if (attempts < maxAttempts) {
+        console.log(`[지도] 카카오 지도 대기 중... (${attempts}/${maxAttempts})`);
+        setTimeout(checkKakaoMaps, 100);
+      } else {
+        console.warn("[지도] ⚠️ index.html에서 로드 실패, 동적 로드 시도...");
+
+        // 폴백: 동적으로 스크립트 로드
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=57446d64905fa28b047405cf38138cad';
+
+        script.onload = () => {
+          console.log("[지도] ✅ 동적 로드 성공!");
+          if (window.kakao && window.kakao.maps) {
+            setKakaoLoaded(true);
+          }
+        };
+
+        script.onerror = () => {
+          console.error("[지도] ❌ 동적 로드도 실패. 네트워크를 확인하세요.");
+        };
+
+        document.head.appendChild(script);
+        scriptElement = script;
+      }
+    };
+
+    checkKakaoMaps();
+
+    return () => {
+      if (scriptElement && scriptElement.parentNode) {
+        scriptElement.parentNode.removeChild(scriptElement);
+      }
+    };
+  }, []);
+
+  // 지도 초기화
+  useEffect(() => {
+    console.log("[지도] 지도 초기화 시도, kakaoLoaded:", kakaoLoaded, "map:", map);
+
+    if (!kakaoLoaded) {
+      console.log("[지도] 카카오 지도가 아직 로드되지 않았습니다.");
+      return;
+    }
+
+    if (map) {
+      console.log("[지도] 지도가 이미 초기화되어 있습니다.");
+      return;
+    }
+
+    // 약간의 지연 후 지도 초기화 (DOM이 완전히 렌더링될 때까지 대기)
+    const timer = setTimeout(() => {
+      const mapContainer = document.getElementById('kakao-map');
+      console.log("[지도] 지도 컨테이너:", mapContainer);
+
+      if (!mapContainer) {
+        console.error("[지도] 지도 컨테이너를 찾을 수 없습니다.");
+        return;
+      }
+
+      console.log("[지도] 지도 컨테이너 크기:", mapContainer.offsetWidth, "x", mapContainer.offsetHeight);
+
+      if (mapContainer.offsetHeight === 0) {
+        console.error("[지도] 지도 컨테이너의 높이가 0입니다!");
+        return;
+      }
+
+      console.log("[지도] 지도 초기화 시작...");
+      // 기본 위치 (서울시청)
+      const defaultPosition = new window.kakao.maps.LatLng(37.5665, 126.9780);
+
+      const mapOption = {
+        center: defaultPosition,
+        level: 3
+      };
+
+      try {
+        const newMap = new window.kakao.maps.Map(mapContainer, mapOption);
+        console.log("[지도] 지도 초기화 완료:", newMap);
+        setMap(newMap);
+
+        // 지도가 정상적으로 보이도록 relayout 호출
+        setTimeout(() => {
+          newMap.relayout();
+          console.log("[지도] 지도 relayout 완료");
+        }, 100);
+      } catch (error) {
+        console.error("[지도] 지도 초기화 실패:", error);
+      }
+    }, 300); // 300ms 지연
+
+    return () => clearTimeout(timer);
+  }, [kakaoLoaded, map]);
+
   useEffect(() => {
     // 인증 토큰 확인
     const token = getToken();
@@ -87,28 +204,34 @@ export default function Dashboard() {
     try {
       setLoading(true);
       setError(null);
-      
+
+      console.log("[DashBoard] 데이터 로딩 시작, activeTab:", activeTab);
+
       if (activeTab === "active") {
         const response = await getActiveFires();
+        console.log("[DashBoard] 활성 화재 응답:", response);
         const reports = response.reports || [];
         const transformed = reports.map(transformReport);
+        console.log("[DashBoard] 변환된 데이터:", transformed);
         setList(transformed);
-        
+
         if (transformed.length > 0 && !selectedId) {
           setSelectedId(transformed[0].id);
         }
       } else {
         const response = await getCompletedFires();
+        console.log("[DashBoard] 완료 화재 응답:", response);
         const reports = response.reports || [];
         const transformed = reports.map(transformReport);
+        console.log("[DashBoard] 변환된 데이터:", transformed);
         setList(transformed);
-        
+
         if (transformed.length > 0 && !selectedId) {
           setSelectedId(transformed[0].id);
         }
       }
     } catch (err) {
-      console.error("화재 신고 로드 실패:", err);
+      console.error("[DashBoard] 화재 신고 로드 실패:", err);
 
       // 401 에러면 로그인 페이지로 리다이렉트
       if (err.status === 401) {
@@ -123,6 +246,7 @@ export default function Dashboard() {
       setSelectedId(null);
     } finally {
       setLoading(false);
+      console.log("[DashBoard] 데이터 로딩 완료");
     }
   };
   
@@ -135,6 +259,45 @@ export default function Dashboard() {
     () => list.find((f) => f.id === selectedId) ?? list[0],
     [list, selectedId]
   );
+
+  // 선택된 신고의 위치로 지도 업데이트
+  useEffect(() => {
+    if (!map || !selected) return;
+
+    // 위도/경도가 없으면 기본 위치 유지
+    if (!selected.latitude || !selected.longitude) {
+      console.log("선택된 신고에 위치 정보가 없습니다:", selected);
+      return;
+    }
+
+    const position = new window.kakao.maps.LatLng(selected.latitude, selected.longitude);
+
+    // 지도 중심 이동
+    map.setCenter(position);
+
+    // 기존 마커 제거
+    if (marker) {
+      marker.setMap(null);
+    }
+
+    // 새 마커 생성
+    const newMarker = new window.kakao.maps.Marker({
+      position: position,
+      map: map
+    });
+
+    // 인포윈도우 추가
+    const infowindow = new window.kakao.maps.InfoWindow({
+      content: `<div style="padding:5px;font-size:12px;text-align:center;width:150px;">
+                  <strong>🔥 신고 위치</strong><br/>
+                  ${selected.location || '위치 정보 없음'}
+                </div>`
+    });
+
+    infowindow.open(map, newMarker);
+
+    setMarker(newMarker);
+  }, [map, selected?.id, selected?.latitude, selected?.longitude]);
 
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -342,7 +505,26 @@ export default function Dashboard() {
                 <section className="fd-map-card">
                   <div className="fd-map-label">MAP</div>
                   <div className="fd-map-box">
-                    <div className="fd-map-placeholder">지도 로딩 영역</div>
+                    {kakaoLoaded ? (
+                      <div
+                        id="kakao-map"
+                        ref={(el) => {
+                          if (el) console.log("[지도] 지도 div 렌더링됨, 크기:", el.offsetWidth, "x", el.offsetHeight);
+                        }}
+                      ></div>
+                    ) : map === null && kakaoLoaded === false ? (
+                      <div className="fd-map-placeholder">
+                        <div style={{ textAlign: 'center', padding: '20px' }}>
+                          <div style={{ fontSize: '40px', marginBottom: '10px' }}>🗺️</div>
+                          <div style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>지도 로딩 중...</div>
+                          <div style={{ fontSize: '12px', color: '#999' }}>
+                            문제가 지속되면 Network 탭을 확인하세요
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="fd-map-placeholder">지도를 사용할 수 없습니다</div>
+                    )}
                   </div>
                 </section>
 
