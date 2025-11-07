@@ -164,48 +164,6 @@ export default function Dashboard() {
     [list, selectedId]
   );
 
-  // 선택된 신고의 위치로 지도 업데이트
-  useEffect(() => {
-    if (!map || !selected) return;
-
-    // 위도/경도가 없으면 기본 위치 유지
-    if (!selected.latitude || !selected.longitude) {
-      console.log('선택된 신고에 위치 정보가 없습니다:', selected);
-      return;
-    }
-
-    const position = new window.kakao.maps.LatLng(
-      selected.latitude,
-      selected.longitude
-    );
-
-    // 지도 중심 이동
-    map.setCenter(position);
-
-    // 기존 마커 제거
-    if (marker) {
-      marker.setMap(null);
-    }
-
-    // 새 마커 생성
-    const newMarker = new window.kakao.maps.Marker({
-      position: position,
-      map: map,
-    });
-
-    // 인포윈도우 추가
-    const infowindow = new window.kakao.maps.InfoWindow({
-      content: `<div style="padding:5px;font-size:12px;text-align:center;width:150px;">
-                  <strong>🔥 신고 위치</strong><br/>
-                  ${selected.location || '위치 정보 없음'}
-                </div>`,
-    });
-
-    infowindow.open(map, newMarker);
-
-    setMarker(newMarker);
-  }, [map, selected?.id, selected?.latitude, selected?.longitude]);
-
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
