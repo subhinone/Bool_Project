@@ -1,20 +1,25 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "./DashBoard.css";
-import logo119 from "../assets/119_bool.png";
-import CompleteModal from "./CompleteModal";
-import KakaoMap from "./KakaoMap";
-import { getActiveFires, getCompletedFires, updateFireStatus, getToken } from "../utils/api";
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './DashBoard.css';
+import logo119 from '../assets/119_bool.png';
+import CompleteModal from './CompleteModal';
+import KakaoMap from './KakaoMap';
+import {
+  getActiveFires,
+  getCompletedFires,
+  updateFireStatus,
+  getToken,
+} from '../utils/api';
 
 // Base64 이미지를 표시 가능한 URL로 변환하는 헬퍼 함수
 const getImageUrl = (base64String) => {
   if (!base64String) return null;
-  
+
   // 이미 data: URL 형식인 경우 그대로 반환
   if (base64String.startsWith('data:')) {
     return base64String;
   }
-  
+
   // Base64 문자열인 경우 data: URL 형식으로 변환
   // JPEG는 /9j/4AAQ... 로 시작
   if (base64String.startsWith('/9j/') || base64String.startsWith('iVBOR')) {
@@ -22,7 +27,7 @@ const getImageUrl = (base64String) => {
     const isPng = base64String.startsWith('iVBOR');
     return `data:image/${isPng ? 'png' : 'jpeg'};base64,${base64String}`;
   }
-  
+
   // 기본적으로 JPEG로 처리
   return `data:image/jpeg;base64,${base64String}`;
 };
@@ -32,7 +37,7 @@ const transformReport = (report) => {
   const createdAt = new Date(report.created_at);
   const now = new Date();
   const diffMinutes = Math.floor((now - createdAt) / (1000 * 60));
-  
+
   return {
     id: report.id,
     title: report.address || `화재 신고 #${report.id}`,
@@ -40,95 +45,109 @@ const transformReport = (report) => {
     status: report.status === 'resolved' ? 'DONE' : 'FIRE',
     preview: getImageUrl(report.annotated_image), // Base64 이미지 변환
     location: report.address,
-    wind: report.wind_direction && report.wind_speed 
-      ? `${report.wind_direction} ${report.wind_speed}m/s`
-      : '-',
+    latitude: report.latitude,
+    longitude: report.longitude,
+    wind:
+      report.wind_direction && report.wind_speed
+        ? `${report.wind_direction} ${report.wind_speed}m/s`
+        : '-',
     humidity: report.humidity ? `${Math.round(report.humidity)}%` : '-',
     risk: Math.round(report.confidence || 0),
     reporter: {
       name: report.user_name || '알 수 없음',
       phone: report.user_phone || '-',
-      reportId: report.id.toString()
+      reportId: report.id.toString(),
     },
-    memo: `${report.fire_type || 'unknown'} 화재 (신뢰도: ${Math.round(report.confidence || 0)}%)`,
+    memo: `${report.fire_type || 'unknown'} 화재 (신뢰도: ${Math.round(
+      report.confidence || 0
+    )}%)`,
     // 원본 데이터도 함께 저장
-    _raw: report
+    _raw: report,
   };
 };
 
 export default function Dashboard() {
+  console.log('[DashBoard] 컴포넌트 렌더링');
+
   const navigate = useNavigate();
   const [list, setList] = useState([]);
-  const [activeTab, setActiveTab] = useState("active");
-  const [query, setQuery] = useState("");
+  const [activeTab, setActiveTab] = useState('active');
+  const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [stationName, setStationName] = useState("용인시 소방서");
+  const [stationName, setStationName] = useState('용인시 소방서');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  
+
   useEffect(() => {
     // 인증 토큰 확인
     const token = getToken();
     if (!token) {
-      alert("로그인이 필요합니다.");
-      navigate("/login");
+      alert('로그인이 필요합니다.');
+      navigate('/login');
       return;
     }
 
     // 로그인 시 저장된 소방서 정보 가져오기
-    const savedStationName = localStorage.getItem("stationName") || "소방서";
+    const savedStationName = localStorage.getItem('stationName') || '소방서';
     setStationName(savedStationName);
 
     // 화재 신고 목록 로드
     loadReports();
   }, [navigate]);
-  
+
   const loadReports = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      if (activeTab === "active") {
+
+      console.log('[DashBoard] 데이터 로딩 시작, activeTab:', activeTab);
+
+      if (activeTab === 'active') {
         const response = await getActiveFires();
+        console.log('[DashBoard] 활성 화재 응답:', response);
         const reports = response.reports || [];
         const transformed = reports.map(transformReport);
+        console.log('[DashBoard] 변환된 데이터:', transformed);
         setList(transformed);
-        
+
         if (transformed.length > 0 && !selectedId) {
           setSelectedId(transformed[0].id);
         }
       } else {
         const response = await getCompletedFires();
+        console.log('[DashBoard] 완료 화재 응답:', response);
         const reports = response.reports || [];
         const transformed = reports.map(transformReport);
+        console.log('[DashBoard] 변환된 데이터:', transformed);
         setList(transformed);
-        
+
         if (transformed.length > 0 && !selectedId) {
           setSelectedId(transformed[0].id);
         }
       }
     } catch (err) {
-      console.error("화재 신고 로드 실패:", err);
+      console.error('[DashBoard] 화재 신고 로드 실패:', err);
 
       // 401 에러면 로그인 페이지로 리다이렉트
       if (err.status === 401) {
-        alert("인증이 만료되었습니다. 다시 로그인해주세요.");
-        navigate("/login");
+        alert('인증이 만료되었습니다. 다시 로그인해주세요.');
+        navigate('/login');
         return;
       }
 
-      setError(err.message || "데이터를 불러올 수 없습니다.");
+      setError(err.message || '데이터를 불러올 수 없습니다.');
       // 에러 발생 시 빈 목록 표시
       setList([]);
       setSelectedId(null);
     } finally {
       setLoading(false);
+      console.log('[DashBoard] 데이터 로딩 완료');
     }
   };
-  
+
   // 탭 변경 시 데이터 다시 로드 및 페이지 리셋
   useEffect(() => {
     loadReports();
@@ -145,6 +164,48 @@ export default function Dashboard() {
     [list, selectedId]
   );
 
+  // 선택된 신고의 위치로 지도 업데이트
+  useEffect(() => {
+    if (!map || !selected) return;
+
+    // 위도/경도가 없으면 기본 위치 유지
+    if (!selected.latitude || !selected.longitude) {
+      console.log('선택된 신고에 위치 정보가 없습니다:', selected);
+      return;
+    }
+
+    const position = new window.kakao.maps.LatLng(
+      selected.latitude,
+      selected.longitude
+    );
+
+    // 지도 중심 이동
+    map.setCenter(position);
+
+    // 기존 마커 제거
+    if (marker) {
+      marker.setMap(null);
+    }
+
+    // 새 마커 생성
+    const newMarker = new window.kakao.maps.Marker({
+      position: position,
+      map: map,
+    });
+
+    // 인포윈도우 추가
+    const infowindow = new window.kakao.maps.InfoWindow({
+      content: `<div style="padding:5px;font-size:12px;text-align:center;width:150px;">
+                  <strong>🔥 신고 위치</strong><br/>
+                  ${selected.location || '위치 정보 없음'}
+                </div>`,
+    });
+
+    infowindow.open(map, newMarker);
+
+    setMarker(newMarker);
+  }, [map, selected?.id, selected?.latitude, selected?.longitude]);
+
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -154,10 +215,10 @@ export default function Dashboard() {
   const filtered = useMemo(() => {
     let result = list;
 
-    if (activeTab === "active") {
-      result = result.filter((f) => f.status === "FIRE");
+    if (activeTab === 'active') {
+      result = result.filter((f) => f.status === 'FIRE');
     } else {
-      result = result.filter((f) => f.status === "DONE");
+      result = result.filter((f) => f.status === 'DONE');
     }
 
     const q = query.trim();
@@ -186,33 +247,36 @@ export default function Dashboard() {
 
   const handleComplete = async () => {
     if (!selectedId) return;
-    
+
     try {
       // 백엔드에 상태 업데이트 요청
       await updateFireStatus(selectedId, 'resolved');
-      
+
       // 로컬 상태 업데이트
       setList((prevList) =>
         prevList.map((item) =>
-          item.id === selectedId ? { ...item, status: "DONE" } : item
+          item.id === selectedId ? { ...item, status: 'DONE' } : item
         )
       );
 
       setShowCompleteModal(true);
     } catch (err) {
-      console.error("처리 완료 실패:", err);
-      alert("처리 완료 중 오류가 발생했습니다: " + (err.message || "알 수 없는 오류"));
+      console.error('처리 완료 실패:', err);
+      alert(
+        '처리 완료 중 오류가 발생했습니다: ' +
+          (err.message || '알 수 없는 오류')
+      );
     }
   };
 
   const handleModalConfirm = () => {
     setShowCompleteModal(false);
-    setActiveTab("history");
+    setActiveTab('history');
   };
 
   const handleLogout = () => {
-    if (window.confirm("로그아웃 하시겠습니까?")) {
-      navigate("/login");
+    if (window.confirm('로그아웃 하시겠습니까?')) {
+      navigate('/login');
     }
   };
 
@@ -220,27 +284,27 @@ export default function Dashboard() {
     <div className="fd-wrap">
       <header className="fd-header" role="banner">
         <div className="fd-header-left">
-  <img src={logo119} alt="BOOL119" />
-  <h1>
-    {stationName}
-    <span className="fd-sub">
-      {activeTab === "active" ? "실시간 신고 내역" : "처리 내역"}
-    </span>
-  </h1>
-</div>
+          <img src={logo119} alt="BOOL119" />
+          <h1>
+            {stationName}
+            <span className="fd-sub">
+              {activeTab === 'active' ? '실시간 신고 내역' : '처리 내역'}
+            </span>
+          </h1>
+        </div>
         <nav className="fd-tabs" aria-label="화면 전환">
           <button className="fd-logout-btn" onClick={handleLogout}>
             로그아웃
           </button>
           <button
-            className={activeTab === "active" ? "active" : ""}
-            onClick={() => setActiveTab("active")}
+            className={activeTab === 'active' ? 'active' : ''}
+            onClick={() => setActiveTab('active')}
           >
             실시간 신고 내역
           </button>
           <button
-            className={activeTab === "history" ? "active" : ""}
-            onClick={() => setActiveTab("history")}
+            className={activeTab === 'history' ? 'active' : ''}
+            onClick={() => setActiveTab('history')}
           >
             처리 내역
           </button>
@@ -251,8 +315,8 @@ export default function Dashboard() {
         <aside className="fd-side" aria-label="화재 목록">
           <div className="fd-card fd-side-card">
             <div className="fd-side-title">
-  {activeTab === "active" ? "화재 목록" : "처리 내역"}
-</div>
+              {activeTab === 'active' ? '화재 목록' : '처리 내역'}
+            </div>
             <div className="fd-search">
               <input
                 value={query}
@@ -270,7 +334,7 @@ export default function Dashboard() {
                     role="option"
                     aria-selected={selectedId === f.id}
                     className={`fd-list-item ${
-                      selectedId === f.id ? "is-active" : ""
+                      selectedId === f.id ? 'is-active' : ''
                     }`}
                     onClick={() => setSelectedId(f.id)}
                   >
@@ -284,9 +348,9 @@ export default function Dashboard() {
                 <div className="fd-empty">
                   <div className="fd-empty-icon">📭</div>
                   <div className="fd-empty-text">
-                    {activeTab === "active"
-                      ? "신고 내역이 없습니다"
-                      : "처리된 내역이 없습니다"}
+                    {activeTab === 'active'
+                      ? '신고 내역이 없습니다'
+                      : '처리된 내역이 없습니다'}
                   </div>
                 </div>
               )}
@@ -295,43 +359,51 @@ export default function Dashboard() {
             {totalPages > 1 && (
               <div className="fd-pagination">
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
                   disabled={currentPage === 1}
                   style={{
                     padding: '4px 8px',
                     margin: '0 4px',
                     cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    opacity: currentPage === 1 ? 0.5 : 1
+                    opacity: currentPage === 1 ? 0.5 : 1,
                   }}
                 >
                   ←
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    style={{
-                      padding: '4px 8px',
-                      margin: '0 2px',
-                      fontWeight: currentPage === page ? 'bold' : 'normal',
-                      backgroundColor: currentPage === page ? '#111827' : 'transparent',
-                      color: currentPage === page ? '#fff' : '#6b7280',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {page}
-                  </button>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      style={{
+                        padding: '4px 8px',
+                        margin: '0 2px',
+                        fontWeight: currentPage === page ? 'bold' : 'normal',
+                        backgroundColor:
+                          currentPage === page ? '#111827' : 'transparent',
+                        color: currentPage === page ? '#fff' : '#6b7280',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
                   disabled={currentPage === totalPages}
                   style={{
                     padding: '4px 8px',
                     margin: '0 4px',
-                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                    opacity: currentPage === totalPages ? 0.5 : 1
+                    cursor:
+                      currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    opacity: currentPage === totalPages ? 0.5 : 1,
                   }}
                 >
                   →
@@ -368,33 +440,36 @@ export default function Dashboard() {
                 </div>
                 <div
                   className={`fd-badge ${
-                    selected.status === "DONE" ? "done" : "fire"
+                    selected.status === 'DONE' ? 'done' : 'fire'
                   }`}
                 >
-                  {selected.status === "DONE" ? "처리 완료" : "FIRE"}
+                  {selected.status === 'DONE' ? '처리 완료' : 'FIRE'}
                 </div>
               </div>
 
               <div className="fd-media">
                 {selected.preview ? (
-                  <img 
-                    src={selected.preview} 
+                  <img
+                    src={selected.preview}
                     alt="현장 영상/이미지"
                     onError={(e) => {
                       // 이미지 로드 실패 시 플레이스홀더 표시
-                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIiBmaWxsPSIjOTk5Ij5JbWFnZSBOb3QgQXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
+                      e.target.src =
+                        'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIiBmaWxsPSIjOTk5Ij5JbWFnZSBOb3QgQXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
                     }}
                   />
                 ) : (
-                  <div style={{ 
-                    width: '100%', 
-                    height: '300px', 
-                    backgroundColor: '#ddd', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    color: '#999'
-                  }}>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '300px',
+                      backgroundColor: '#ddd',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#999',
+                    }}
+                  >
                     이미지 없음
                   </div>
                 )}
@@ -410,7 +485,7 @@ export default function Dashboard() {
                           latitude: selected._raw.latitude,
                           longitude: selected._raw.longitude,
                           address: selected.location,
-                          fullData: selected._raw
+                          fullData: selected._raw,
                         })}
                         <KakaoMap
                           latitude={selected._raw.latitude}
@@ -420,17 +495,19 @@ export default function Dashboard() {
                       </>
                     )}
                     {(!selected || !selected._raw) && (
-                      <div style={{
-                        width: '100%',
-                        height: '100%',
-                        minHeight: '200px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: '#f5f5f5',
-                        color: '#666',
-                        borderRadius: '8px',
-                      }}>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          minHeight: '200px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: '#f5f5f5',
+                          color: '#666',
+                          borderRadius: '8px',
+                        }}
+                      >
                         데이터를 불러오는 중...
                       </div>
                     )}
@@ -471,9 +548,9 @@ export default function Dashboard() {
                     <button
                       className="btn btn-primary"
                       onClick={handleComplete}
-                      disabled={selected.status === "DONE"}
+                      disabled={selected.status === 'DONE'}
                     >
-                      {selected.status === "DONE" ? "처리됨" : "처리 완료"}
+                      {selected.status === 'DONE' ? '처리됨' : '처리 완료'}
                     </button>
                   </div>
                 </section>
@@ -483,17 +560,17 @@ export default function Dashboard() {
             <div className="fd-card fd-main-card fd-main-empty">
               <div className="fd-empty-main">
                 <div className="fd-empty-icon-large">
-                  {activeTab === "active" ? "🔥" : "✅"}
+                  {activeTab === 'active' ? '🔥' : '✅'}
                 </div>
                 <div className="fd-empty-title">
-                  {activeTab === "active"
-                    ? "현재 신고 내역이 없습니다"
-                    : "처리된 내역이 없습니다"}
+                  {activeTab === 'active'
+                    ? '현재 신고 내역이 없습니다'
+                    : '처리된 내역이 없습니다'}
                 </div>
                 <div className="fd-empty-desc">
-                  {activeTab === "active"
-                    ? "새로운 화재 신고가 들어오면 여기에 표시됩니다"
-                    : "처리 완료된 신고 내역이 여기에 표시됩니다"}
+                  {activeTab === 'active'
+                    ? '새로운 화재 신고가 들어오면 여기에 표시됩니다'
+                    : '처리 완료된 신고 내역이 여기에 표시됩니다'}
                 </div>
               </div>
             </div>
@@ -504,15 +581,15 @@ export default function Dashboard() {
           <div className="fd-card fd-clock" aria-live="polite">
             <div className="fd-clock-icon">🕑</div>
             <div className="fd-clock-date">
-              {now.getFullYear().toString().slice(2)}년{" "}
-              {(now.getMonth() + 1).toString().padStart(2, "0")}월{" "}
-              {now.getDate().toString().padStart(2, "0")}일
+              {now.getFullYear().toString().slice(2)}년{' '}
+              {(now.getMonth() + 1).toString().padStart(2, '0')}월{' '}
+              {now.getDate().toString().padStart(2, '0')}일
             </div>
             <div className="fd-clock-time">
-              {now.toLocaleTimeString("ko-KR", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
+              {now.toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
               })}
             </div>
           </div>
@@ -550,7 +627,7 @@ export default function Dashboard() {
 
       <CompleteModal
         open={showCompleteModal}
-        fireTitle={selected?.title || ""}
+        fireTitle={selected?.title || ''}
         onStay={() => setShowCompleteModal(false)}
         onMoveToHistory={handleModalConfirm}
         onClose={() => setShowCompleteModal(false)}
