@@ -5,6 +5,32 @@
     <link rel="icon" type="image/png" href="src\assets\bool_logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BOOL</title>
+    <!-- Kakao Map API -->
+    <script
+      type="text/javascript"
+      src="//dapi.kakao.com/v2/maps/sdk.js?appkey=65f4831b3ba213db5449a19d1bcf1eb1"
+      onload="console.log('✅ Kakao Maps SDK loaded successfully')"
+      onerror="console.error('❌ Failed to load Kakao Maps SDK from CDN')"
+    ></script>
+    <script type="text/javascript">
+      // Kakao API 로딩 상태 확인
+      window.addEventListener('load', function () {
+        console.log('Window loaded, checking Kakao API...');
+        console.log('window.kakao:', window.kakao);
+        console.log('window.kakao.maps:', window.kakao?.maps);
+
+        if (!window.kakao || !window.kakao.maps) {
+          console.error('❌ Kakao Maps API is not available');
+          console.error('This could be due to:');
+          console.error('1. Invalid API key');
+          console.error('2. Network connection issues');
+          console.error('3. CORS policy blocking the request');
+          console.error('4. Kakao Developers site registration issues');
+        } else {
+          console.log('✅ Kakao Maps API is ready to use');
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

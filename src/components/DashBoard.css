@@ -13,19 +13,30 @@
 * {
   box-sizing: border-box;
 }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
 body {
   color: var(--text);
+}
+
+#root {
+  width: 100%;
+  height: 100%;
 }
 
 /* 래퍼를 flex 컨테이너로 만들어 전체 높이를 관리합니다. */
 .fd-wrap {
   min-height: 100vh;
-  max-height: 100vh;
   background: var(--bg);
   padding: 20px 22px 24px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .fd-header {
@@ -96,11 +107,9 @@ body {
   display: grid;
   grid-template-columns: 300px 1fr 320px;
   gap: 16px;
-  flex-grow: 1;
-  align-items: stretch;
-  max-height: calc(100vh - 100px);
-  overflow: hidden;
-  min-height: 0;
+  flex: 1;
+  align-items: start;
+  min-height: 600px;
 }
 
 /* 모든 카드가 부모 그리드 셀의 높이를 꽉 채우도록 설정합니다. */
@@ -109,7 +118,6 @@ body {
   border: 1px solid var(--line);
   border-radius: 16px;
   box-shadow: var(--shadow);
-  height: 100%;
 }
 
 /* 사이드 카드를 flex 컨테이너로 만들어 내부 목록이 공간을 채우게 합니다. */
@@ -117,8 +125,7 @@ body {
   padding: 14px;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  min-height: 600px;
 }
 .fd-side-title {
   font-weight: 800;
@@ -176,6 +183,30 @@ body {
   font-size: 12px;
   padding-top: 8px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.fd-pagination button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.fd-pagination button:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.fd-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 
 .fd-empty {
@@ -236,8 +267,7 @@ body {
   padding: 14px;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  min-height: 600px;
 }
 .fd-main-head {
   display: flex;
@@ -271,8 +301,8 @@ body {
 }
 
 .fd-media {
-  max-height: 300px;
-  min-height: 200px;
+  max-height: 400px;
+  min-height: 250px;
   height: auto;
   border-radius: 14px;
   overflow: hidden;
@@ -282,12 +312,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 1;
+  flex-shrink: 0;
 }
 .fd-media img {
   width: 100%;
   height: auto;
-  max-height: 300px;
+  max-height: 400px;
   object-fit: contain;
   display: block;
 }
@@ -298,9 +328,9 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-top: 8px;
-  flex-grow: 1;
+  flex-shrink: 0;
   align-items: stretch;
-  min-height: 0;
+  min-height: 200px;
 }
 
 /* 지도 카드도 내부 공간을 관리하도록 flex로 설정합니다. */
@@ -325,6 +355,8 @@ body {
 .fd-map-box {
   padding: 12px;
   flex-grow: 1;
+  min-height: 300px;
+  height: 100%;
 }
 /* 지도 영역이 부모의 높이를 꽉 채우도록 합니다. */
 .fd-map-placeholder {

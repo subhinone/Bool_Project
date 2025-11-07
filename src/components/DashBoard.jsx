@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./DashBoard.css";
 import logo119 from "../assets/119_bool.png";
 import CompleteModal from "./CompleteModal";
+import KakaoMap from "./KakaoMap";
 import { getActiveFires, getCompletedFires, updateFireStatus, getToken } from "../utils/api";
 
 // Base64 이미지를 표시 가능한 URL로 변환하는 헬퍼 함수
@@ -65,6 +66,8 @@ export default function Dashboard() {
   const [stationName, setStationName] = useState("용인시 소방서");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   useEffect(() => {
     // 인증 토큰 확인
@@ -126,10 +129,16 @@ export default function Dashboard() {
     }
   };
   
-  // 탭 변경 시 데이터 다시 로드
+  // 탭 변경 시 데이터 다시 로드 및 페이지 리셋
   useEffect(() => {
     loadReports();
+    setCurrentPage(1);
   }, [activeTab]);
+
+  // 검색어 변경 시 페이지 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query]);
 
   const selected = useMemo(
     () => list.find((f) => f.id === selectedId) ?? list[0],
@@ -158,6 +167,14 @@ export default function Dashboard() {
 
     return result;
   }, [list, query, activeTab]);
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedList = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, currentPage, itemsPerPage]);
 
   useEffect(() => {
     if (filtered.length > 0) {
@@ -246,8 +263,8 @@ export default function Dashboard() {
             </div>
 
             <ul className="fd-list" role="listbox">
-              {filtered.length > 0 ? (
-                filtered.map((f) => (
+              {paginatedList.length > 0 ? (
+                paginatedList.map((f) => (
                   <li
                     key={f.id}
                     role="option"
@@ -275,7 +292,52 @@ export default function Dashboard() {
               )}
             </ul>
 
-            <div className="fd-pagination">1&nbsp;&nbsp;2&nbsp;&nbsp;3</div>
+            {totalPages > 1 && (
+              <div className="fd-pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '4px 8px',
+                    margin: '0 4px',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    opacity: currentPage === 1 ? 0.5 : 1
+                  }}
+                >
+                  ←
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    style={{
+                      padding: '4px 8px',
+                      margin: '0 2px',
+                      fontWeight: currentPage === page ? 'bold' : 'normal',
+                      backgroundColor: currentPage === page ? '#111827' : 'transparent',
+                      color: currentPage === page ? '#fff' : '#6b7280',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '4px 8px',
+                    margin: '0 4px',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    opacity: currentPage === totalPages ? 0.5 : 1
+                  }}
+                >
+                  →
+                </button>
+              </div>
+            )}
           </div>
         </aside>
 
@@ -342,7 +404,36 @@ export default function Dashboard() {
                 <section className="fd-map-card">
                   <div className="fd-map-label">MAP</div>
                   <div className="fd-map-box">
-                    <div className="fd-map-placeholder">지도 로딩 영역</div>
+                    {selected && selected._raw && (
+                      <>
+                        {console.log('📊 Selected report data:', {
+                          latitude: selected._raw.latitude,
+                          longitude: selected._raw.longitude,
+                          address: selected.location,
+                          fullData: selected._raw
+                        })}
+                        <KakaoMap
+                          latitude={selected._raw.latitude}
+                          longitude={selected._raw.longitude}
+                          address={selected.location}
+                        />
+                      </>
+                    )}
+                    {(!selected || !selected._raw) && (
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
+                        minHeight: '200px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#f5f5f5',
+                        color: '#666',
+                        borderRadius: '8px',
+                      }}>
+                        데이터를 불러오는 중...
+                      </div>
+                    )}
                   </div>
                 </section>
 
