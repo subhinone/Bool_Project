@@ -32,6 +32,22 @@ const getImageUrl = (base64String) => {
   return `data:image/jpeg;base64,${base64String}`;
 };
 
+// 상대적 시간을 한국어로 표시하는 헬퍼 함수
+const formatRelativeTime = (minutes) => {
+  if (minutes < 1) {
+    return '방금 전';
+  } else if (minutes < 60) {
+    return `${minutes}분 전`;
+  } else if (minutes < 1440) {
+    // 1440분 = 24시간
+    const hours = Math.floor(minutes / 60);
+    return `${hours}시간 전`;
+  } else {
+    const days = Math.floor(minutes / 1440);
+    return `${days}일 전`;
+  }
+};
+
 // 백엔드 데이터를 웹앱 형식으로 변환
 const transformReport = (report) => {
   const createdAt = new Date(report.created_at);
@@ -291,7 +307,7 @@ export default function Dashboard() {
                   >
                     <div className="fd-list-title">{f.title}</div>
                     <div className="fd-list-meta">
-                      {f.minutesAgo} minutes ago
+                      {formatRelativeTime(f.minutesAgo)}
                     </div>
                   </li>
                 ))
@@ -386,7 +402,7 @@ export default function Dashboard() {
                 <div className="fd-main-title">
                   {selected.title}
                   <span className="fd-main-time">
-                    {selected.minutesAgo} minutes ago
+                    {formatRelativeTime(selected.minutesAgo)}
                   </span>
                 </div>
                 <div
