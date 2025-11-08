@@ -22,6 +22,15 @@ const KakaoMap = ({ latitude, longitude, address }) => {
 
       console.log('✅ Kakao API is available, initializing map...');
 
+      // autoload=false 모드에서는 수동으로 로드 필요
+      window.kakao.maps.load(() => {
+        console.log('✅ Kakao Maps loaded via kakao.maps.load()');
+        renderMap();
+      });
+    };
+
+    const renderMap = () => {
+
       try {
         // 기본 위치 (위도/경도가 없을 경우)
         const defaultLat = 37.5665;

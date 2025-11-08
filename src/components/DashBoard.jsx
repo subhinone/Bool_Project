@@ -54,6 +54,20 @@ const transformReport = (report) => {
   const now = new Date();
   const diffMinutes = Math.floor((now - createdAt) / (1000 * 60));
 
+  // 디버깅: 백엔드에서 받은 날씨 데이터 확인
+  console.log('[DashBoard] 받은 report 데이터:', {
+    windDirection: report.windDirection,
+    windSpeed: report.windSpeed,
+    humidity: report.humidity,
+    wind_direction: report.wind_direction,
+    wind_speed: report.wind_speed,
+  });
+
+  // 날씨 정보 처리 (카멜케이스 우선, 스네이크케이스도 지원)
+  const windDirection = report.windDirection || report.wind_direction;
+  const windSpeed = report.windSpeed || report.wind_speed;
+  const humidity = report.humidity;
+
   return {
     id: report.id,
     title: report.address || `화재 신고 #${report.id}`,
@@ -64,10 +78,10 @@ const transformReport = (report) => {
     latitude: report.latitude,
     longitude: report.longitude,
     wind:
-      report.wind_direction && report.wind_speed
-        ? `${report.wind_direction} ${report.wind_speed}m/s`
+      windDirection && windSpeed != null
+        ? `${windDirection} ${windSpeed}m/s`
         : '-',
-    humidity: report.humidity ? `${Math.round(report.humidity)}%` : '-',
+    humidity: humidity != null ? `${Math.round(humidity)}%` : '-',
     risk: Math.round(report.confidence || 0),
     reporter: {
       name: report.user_name || '알 수 없음',
