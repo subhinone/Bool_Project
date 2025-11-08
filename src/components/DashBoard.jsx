@@ -67,8 +67,6 @@ const transformReport = (report) => {
 };
 
 export default function Dashboard() {
-  console.log('[DashBoard] 컴포넌트 렌더링');
-
   const navigate = useNavigate();
   const [list, setList] = useState([]);
   const [activeTab, setActiveTab] = useState('active');
@@ -96,6 +94,7 @@ export default function Dashboard() {
 
     // 화재 신고 목록 로드
     loadReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   const loadReports = async () => {
@@ -103,14 +102,10 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
 
-      console.log('[DashBoard] 데이터 로딩 시작, activeTab:', activeTab);
-
       if (activeTab === 'active') {
         const response = await getActiveFires();
-        console.log('[DashBoard] 활성 화재 응답:', response);
         const reports = response.reports || [];
         const transformed = reports.map(transformReport);
-        console.log('[DashBoard] 변환된 데이터:', transformed);
         setList(transformed);
 
         if (transformed.length > 0 && !selectedId) {
@@ -118,10 +113,8 @@ export default function Dashboard() {
         }
       } else {
         const response = await getCompletedFires();
-        console.log('[DashBoard] 완료 화재 응답:', response);
         const reports = response.reports || [];
         const transformed = reports.map(transformReport);
-        console.log('[DashBoard] 변환된 데이터:', transformed);
         setList(transformed);
 
         if (transformed.length > 0 && !selectedId) {
@@ -144,7 +137,6 @@ export default function Dashboard() {
       setSelectedId(null);
     } finally {
       setLoading(false);
-      console.log('[DashBoard] 데이터 로딩 완료');
     }
   };
 
@@ -152,6 +144,7 @@ export default function Dashboard() {
   useEffect(() => {
     loadReports();
     setCurrentPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   // 검색어 변경 시 페이지 리셋
@@ -438,19 +431,11 @@ export default function Dashboard() {
                   <div className="fd-map-label">MAP</div>
                   <div className="fd-map-box">
                     {selected && selected._raw && (
-                      <>
-                        {console.log('📊 Selected report data:', {
-                          latitude: selected._raw.latitude,
-                          longitude: selected._raw.longitude,
-                          address: selected.location,
-                          fullData: selected._raw,
-                        })}
-                        <KakaoMap
-                          latitude={selected._raw.latitude}
-                          longitude={selected._raw.longitude}
-                          address={selected.location}
-                        />
-                      </>
+                      <KakaoMap
+                        latitude={selected._raw.latitude}
+                        longitude={selected._raw.longitude}
+                        address={selected.location}
+                      />
                     )}
                     {(!selected || !selected._raw) && (
                       <div
@@ -554,7 +539,7 @@ export default function Dashboard() {
 
           <div className="fd-card fd-reporter">
             <div className="fd-reporter-title">신고자 정보</div>
-            {filtered.length > 0 ? (
+            {filtered.length > 0 && selected ? (
               <div className="fd-reporter-body">
                 <div className="fd-avatar" aria-hidden="true">
                   👤
