@@ -31,7 +31,6 @@ body {
   height: 100%;
 }
 
-/* 래퍼를 flex 컨테이너로 만들어 전체 높이를 관리합니다. */
 .fd-wrap {
   min-height: 100vh;
   background: var(--bg);
@@ -103,7 +102,6 @@ body {
   background: transparent !important;
 }
 
-/* 그리드가 남은 세로 공간을 모두 채우도록 설정합니다. */
 .fd-grid {
   display: grid;
   grid-template-columns: 300px 1fr 320px;
@@ -113,7 +111,6 @@ body {
   min-height: 600px;
 }
 
-/* 모든 카드가 부모 그리드 셀의 높이를 꽉 채우도록 설정합니다. */
 .fd-card {
   background: var(--card);
   border: 1px solid var(--line);
@@ -121,7 +118,6 @@ body {
   box-shadow: var(--shadow);
 }
 
-/* 사이드 카드를 flex 컨테이너로 만들어 내부 목록이 공간을 채우게 합니다. */
 .fd-side-card {
   padding: 14px;
   display: flex;
@@ -143,7 +139,6 @@ body {
   border: 1px solid var(--line);
   outline: none;
 }
-/* 목록(ul)이 사이드 카드 내부의 남은 공간을 채우도록 설정합니다. */
 .fd-list {
   list-style: none;
   margin: 0;
@@ -263,7 +258,6 @@ body {
   line-height: 1.6;
 }
 
-/* 메인 카드도 flex 컨테이너로 만들어 내부 공간을 관리합니다. */
 .fd-main-card {
   padding: 14px;
   display: flex;
@@ -323,7 +317,6 @@ body {
   display: block;
 }
 
-/* 메인 카드 하단 영역이 남은 공간을 채우도록 설정합니다. */
 .fd-main-bottom {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -334,7 +327,6 @@ body {
   min-height: 200px;
 }
 
-/* 지도 카드도 내부 공간을 관리하도록 flex로 설정합니다. */
 .fd-map-card {
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -359,7 +351,6 @@ body {
   min-height: 300px;
   height: 100%;
 }
-/* 지도 영역이 부모의 높이를 꽉 채우도록 합니다. */
 .fd-map-placeholder {
   height: 100%;
   min-height: 160px;
@@ -377,7 +368,6 @@ body {
   font-weight: 700;
 }
 
-/* 정보 카드도 내부 공간을 관리하도록 flex로 설정합니다. */
 .fd-info {
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -425,7 +415,6 @@ body {
   width: 0;
 }
 
-/* 메모 영역이 정보 카드 내부의 남은 공간을 채우도록 합니다. */
 .fd-memo {
   background: #f9fafb;
   border: 1px dashed #e5e7eb;
@@ -482,7 +471,6 @@ body {
   gap: 14px;
 }
 
-/* 시계 카드는 고정 높이를 가지도록 height: auto로 재설정합니다. */
 .fd-clock {
   padding: 14px;
   display: grid;
@@ -504,13 +492,12 @@ body {
   color: #111827;
 }
 
-/* 신고자 정보 카드가 우측 열의 남은 공간을 채우도록 합니다. */
 .fd-reporter {
   padding: 14px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  flex-grow: 1; /* 추가 */
+  flex-grow: 1;
 }
 .fd-reporter-title {
   font-weight: 900;
@@ -520,37 +507,118 @@ body {
   background: #fff6f6;
   border: 1px solid #ffe5e5;
   border-radius: 12px;
-  padding: 24px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  flex-grow: 1; /* 추가 */
-  width: 100%; /* 추가 */
-  justify-content: center; /* 추가 */
+  gap: 12px;
+  flex-grow: 1;
+  width: 100%;
+  justify-content: flex-start;
 }
 .fd-avatar {
-  width: 84px;
-  height: 84px;
+  width: 64px;
+  height: 64px;
   border-radius: 999px;
   display: grid;
   place-items: center;
   background: #111827;
   color: #fff;
-  font-size: 32px;
-  margin: 6px auto 8px;
+  font-size: 28px;
+  margin: 0 auto 8px;
 }
 .fd-field .label {
   color: #6b7280;
-  font-size: 12px;
+  font-size: 11px;
   text-align: center;
+  margin-bottom: 2px;
 }
 .fd-field .value {
   font-weight: 800;
   text-align: center;
+  font-size: 13px;
 }
-.fd-reporter .btn-outline {
-  border-color: #ddd;
+
+/* 신고 내역 스타일 */
+.fd-reporter-history {
+  width: 100%;
+  margin-top: 8px;
+  border-top: 1px solid #ffe5e5;
+  padding-top: 12px;
+}
+
+.fd-reporter-history-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #374151;
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.fd-reporter-history-loading,
+.fd-reporter-history-empty {
+  text-align: center;
+  font-size: 12px;
+  color: #9ca3af;
+  padding: 16px 0;
+}
+
+.fd-reporter-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.fd-reporter-history-item {
+  background: #ffffff;
+  border: 1px solid #fee2e2;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 11px;
+  transition: all 0.2s ease;
+}
+
+.fd-reporter-history-item:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.fd-reporter-history-location {
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fd-reporter-history-time {
+  color: #6b7280;
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+.fd-reporter-history-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.fd-reporter-history-status.done {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.fd-reporter-history-status.pending {
+  background: #fff1f2;
+  color: #ef4444;
 }
 
 .fd-reporter-empty {
