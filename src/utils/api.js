@@ -2,9 +2,7 @@
 // 백엔드 API와 통신하기 위한 유틸리티 파일
 
 // 백엔드 서버 주소 (환경에 따라 변경)
-// NestJS Backend: http://localhost:3000/api
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE;
+const API_BASE_URL = import.meta.env.VITE_API_BASE;
 
 // API 요청을 위한 공통 함수
 const apiRequest = async (endpoint, options = {}) => {
