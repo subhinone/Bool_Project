@@ -1,6 +1,6 @@
 import "./App.css";
 import FireStationInfo from "./components/FireStationInfo";
-import FireStationRegister from "./components/FirestationRegister";
+import FireStationRegister from "./components/FireStationRegister";
 import Login from "./components/Login";
 import DashBoard from "./components/DashBoard";
 import { Routes, Route } from "react-router-dom";

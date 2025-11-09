@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "./DashBoard.css";
 import logo119 from "../assets/119_bool.png";
@@ -66,6 +66,11 @@ const transformReport = (report) => {
   const now = new Date();
   const diffMinutes = Math.floor((now - createdAt) / (1000 * 60));
 
+  // 백엔드 응답 형식에 따라 camelCase 또는 snake_case 처리
+  const windDirection = report.wind_direction || report.windDirection;
+  const windSpeed = report.wind_speed || report.windSpeed;
+  const humidity = report.humidity;
+
   return {
     id: report.id,
     title: report.address || `화재 신고 #${report.id}`,
@@ -75,11 +80,17 @@ const transformReport = (report) => {
     location: report.address,
     latitude: report.latitude,
     longitude: report.longitude,
+    // 날씨 정보: 풍향 + 풍속
     wind:
-      report.wind_direction && report.wind_speed
-        ? `${report.wind_direction} ${report.wind_speed}m/s`
+      windDirection && windSpeed
+        ? `${windDirection} ${windSpeed}m/s`
+        : windDirection
+        ? windDirection
+        : windSpeed
+        ? `${windSpeed}m/s`
         : "-",
-    humidity: report.humidity ? `${Math.round(report.humidity)}%` : "-",
+    // 날씨 정보: 습도
+    humidity: humidity ? `${Math.round(humidity)}%` : "-",
     risk: Math.round(report.confidence || 0),
     reporter: {
       name: report.user_name || "알 수 없음",
@@ -90,7 +101,7 @@ const transformReport = (report) => {
     memo: `${report.fire_type || "unknown"} 화재 (신뢰도: ${Math.round(
       report.confidence || 0
     )}%)`,
-    // 원본 데이터도 함께 저장
+    // 원본 데이터도 함께 저장 (디버깅용)
     _raw: report,
   };
 };
@@ -112,25 +123,7 @@ export default function Dashboard() {
   const [reporterHistory, setReporterHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  useEffect(() => {
-    // 인증 토큰 확인
-    const token = getToken();
-    if (!token) {
-      alert("로그인이 필요합니다.");
-      navigate("/login");
-      return;
-    }
-
-    // 로그인 시 저장된 소방서 정보 가져오기
-    const savedStationName = localStorage.getItem("stationName") || "소방서";
-    setStationName(savedStationName);
-
-    // 화재 신고 목록 로드
-    loadReports();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate]);
-
-  const loadReports = async () => {
+  const loadReports = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -171,10 +164,27 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, selectedId, navigate]);
+
+  useEffect(() => {
+    // 인증 토큰 확인
+    const token = getToken();
+    if (!token) {
+      alert("로그인이 필요합니다.");
+      navigate("/login");
+      return;
+    }
+
+    // 로그인 시 저장된 소방서 정보 가져오기
+    const savedStationName = localStorage.getItem("stationName") || "소방서";
+    setStationName(savedStationName);
+
+    // 화재 신고 목록 로드
+    loadReports();
+  }, [navigate, loadReports]);
 
   // 신고자의 신고 내역 로드
-  const loadReporterHistory = async (userId) => {
+  const loadReporterHistory = useCallback(async (userId) => {
     if (!userId) {
       setReporterHistory([]);
       return;
@@ -208,14 +218,13 @@ export default function Dashboard() {
     } finally {
       setLoadingHistory(false);
     }
-  };
+  }, []);
 
   // 탭 변경 시 데이터 다시 로드 및 페이지 리셋
   useEffect(() => {
     loadReports();
     setCurrentPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, loadReports]);
 
   // 검색어 변경 시 페이지 리셋
   useEffect(() => {
@@ -234,8 +243,7 @@ export default function Dashboard() {
     } else {
       setReporterHistory([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected]);
+  }, [selected, loadReporterHistory]);
 
   const [now, setNow] = useState(new Date());
   useEffect(() => {
