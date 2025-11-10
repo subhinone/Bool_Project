@@ -118,20 +118,45 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [autoRefresh, setAutoRefresh] = useState(true); // 자동 갱신 토글
+  const [lastReportCount, setLastReportCount] = useState(0); // 새 신고 감지용
 
   // 신고자별 신고 내역
   const [reporterHistory, setReporterHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  const loadReports = useCallback(async () => {
+  const loadReports = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       setError(null);
 
       if (activeTab === "active") {
         const response = await getActiveFires();
         const reports = response.reports || [];
         const transformed = reports.map(transformReport);
+
+        // 새 신고 감지 (알림용)
+        if (activeTab === "active" && transformed.length > lastReportCount && lastReportCount > 0) {
+          const newReportsCount = transformed.length - lastReportCount;
+
+          // 브라우저 알림 권한 확인 및 표시
+          if (Notification.permission === "granted") {
+            new Notification("🔥 새로운 화재 신고", {
+              body: `${newReportsCount}건의 신규 화재 신고가 접수되었습니다`,
+              icon: "/119_bool.png",
+              badge: "/119_bool.png"
+            });
+          }
+
+          // 오디오 알림 (옵션)
+          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUKzn77tmHQU7k9nyz3ksB');
+          audio.volume = 0.3;
+          audio.play().catch(() => {}); // 오디오 재생 실패는 무시
+        }
+
+        setLastReportCount(transformed.length);
         setList(transformed);
 
         if (transformed.length > 0 && !selectedId) {
@@ -157,14 +182,18 @@ export default function Dashboard() {
         return;
       }
 
-      setError(err.message || "데이터를 불러올 수 없습니다.");
-      // 에러 발생 시 빈 목록 표시
-      setList([]);
-      setSelectedId(null);
+      if (!silent) {
+        setError(err.message || "데이터를 불러올 수 없습니다.");
+        // 에러 발생 시 빈 목록 표시
+        setList([]);
+        setSelectedId(null);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
-  }, [activeTab, selectedId, navigate]);
+  }, [activeTab, selectedId, navigate, lastReportCount]);
 
   useEffect(() => {
     // 인증 토큰 확인
@@ -179,9 +208,33 @@ export default function Dashboard() {
     const savedStationName = localStorage.getItem("stationName") || "소방서";
     setStationName(savedStationName);
 
+    // 브라우저 알림 권한 요청
+    if (Notification.permission === "default") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          console.log("✅ 알림 권한이 허용되었습니다");
+        }
+      });
+    }
+
     // 화재 신고 목록 로드
     loadReports();
   }, [navigate, loadReports]);
+
+  // 자동 갱신 (실시간 신고 탭에서만)
+  useEffect(() => {
+    if (!autoRefresh || activeTab !== "active") {
+      return;
+    }
+
+    // 5초마다 자동으로 데이터 갱신
+    const interval = setInterval(() => {
+      console.log("🔄 자동 갱신 중...");
+      loadReports(true); // silent mode로 로딩 표시 없이 갱신
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, activeTab, loadReports]);
 
   // 신고자의 신고 내역 로드
   const loadReporterHistory = useCallback(async (userId) => {
@@ -332,6 +385,29 @@ export default function Dashboard() {
           </h1>
         </div>
         <nav className="fd-tabs" aria-label="화면 전환">
+          {activeTab === "active" && (
+            <button
+              className="fd-refresh-btn"
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              style={{
+                backgroundColor: autoRefresh ? "#10b981" : "#6b7280",
+                color: "#fff",
+                padding: "8px 16px",
+                borderRadius: "6px",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "14px",
+                marginRight: "10px",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+              title={autoRefresh ? "자동 갱신 ON" : "자동 갱신 OFF"}
+            >
+              <span>{autoRefresh ? "🔄" : "⏸️"}</span>
+              <span>{autoRefresh ? "자동 갱신" : "일시 정지"}</span>
+            </button>
+          )}
           <button className="fd-logout-btn" onClick={handleLogout}>
             로그아웃
           </button>
@@ -353,8 +429,32 @@ export default function Dashboard() {
       <div className="fd-grid">
         <aside className="fd-side" aria-label="화재 목록">
           <div className="fd-card fd-side-card">
-            <div className="fd-side-title">
-              {activeTab === "active" ? "화재 목록" : "처리 내역"}
+            <div className="fd-side-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span>{activeTab === "active" ? "화재 목록" : "처리 내역"}</span>
+              {activeTab === "active" && autoRefresh && (
+                <span
+                  style={{
+                    fontSize: "12px",
+                    color: "#10b981",
+                    backgroundColor: "#d1fae5",
+                    padding: "2px 8px",
+                    borderRadius: "12px",
+                    fontWeight: "500",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}
+                >
+                  <span className="pulse-dot" style={{
+                    width: "6px",
+                    height: "6px",
+                    backgroundColor: "#10b981",
+                    borderRadius: "50%",
+                    animation: "pulse 2s ease-in-out infinite"
+                  }}></span>
+                  실시간
+                </span>
+              )}
             </div>
             <div className="fd-search">
               <input
