@@ -9,6 +9,7 @@ import {
   getCompletedFires,
   updateFireStatus,
   getToken,
+  getFireById,
 } from "../utils/api";
 
 // Base64 이미지를 표시 가능한 URL로 변환하는 헬퍼 함수
@@ -80,17 +81,12 @@ const transformReport = (report) => {
     location: report.address,
     latitude: report.latitude,
     longitude: report.longitude,
-    // 날씨 정보: 풍향 + 풍속
-    wind:
-      windDirection && windSpeed
-        ? `${windDirection} ${windSpeed}m/s`
-        : windDirection
-        ? windDirection
-        : windSpeed
-        ? `${windSpeed}m/s`
-        : "-",
     // 날씨 정보: 습도
     humidity: humidity ? `${Math.round(humidity)}%` : "-",
+    // 날씨 정보: 풍향
+    windDirection: windDirection || "-",
+    // 날씨 정보: 풍속
+    windSpeed: windSpeed ? `${windSpeed}m/s` : "-",
     risk: Math.round(report.confidence || 0),
     reporter: {
       name: report.user_name || "알 수 없음",
@@ -122,6 +118,10 @@ export default function Dashboard() {
   // 신고자별 신고 내역
   const [reporterHistory, setReporterHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // 선택된 신고의 상세 정보 (날씨 정보 포함)
+  const [selectedDetail, setSelectedDetail] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const loadReports = useCallback(async () => {
     try {
@@ -220,6 +220,25 @@ export default function Dashboard() {
     }
   }, []);
 
+  // 선택된 신고의 상세 정보 로드 (날씨 정보 포함)
+  const loadFireDetail = useCallback(async (fireId) => {
+    if (!fireId) {
+      setSelectedDetail(null);
+      return;
+    }
+
+    setLoadingDetail(true);
+    try {
+      const detail = await getFireById(fireId);
+      setSelectedDetail(detail);
+    } catch (err) {
+      console.error(`[DashBoard] 신고 #${fireId} 상세 정보 로드 실패:`, err);
+      setSelectedDetail(null);
+    } finally {
+      setLoadingDetail(false);
+    }
+  }, []);
+
   // 탭 변경 시 데이터 다시 로드 및 페이지 리셋
   useEffect(() => {
     loadReports();
@@ -235,6 +254,13 @@ export default function Dashboard() {
     () => list.find((f) => f.id === selectedId) ?? list[0],
     [list, selectedId]
   );
+
+  // 선택된 신고가 변경되면 상세 정보 로드
+  useEffect(() => {
+    if (selectedId) {
+      loadFireDetail(selectedId);
+    }
+  }, [selectedId, loadFireDetail]);
 
   // 선택된 신고가 변경되면 신고자 내역 로드
   useEffect(() => {
@@ -533,12 +559,34 @@ export default function Dashboard() {
                       <span className="v">{selected.location}</span>
                     </li>
                     <li>
-                      <span className="k">바람</span>
-                      <span className="v">{selected.wind}</span>
+                      <span className="k">습도</span>
+                      <span className="v">
+                        {loadingDetail
+                          ? "로딩 중..."
+                          : selectedDetail?.humidity
+                          ? `${Math.round(selectedDetail.humidity)}%`
+                          : "-"}
+                      </span>
                     </li>
                     <li>
-                      <span className="k">습도</span>
-                      <span className="v">{selected.humidity}</span>
+                      <span className="k">풍향</span>
+                      <span className="v">
+                        {loadingDetail
+                          ? "로딩 중..."
+                          : selectedDetail?.wind_direction ||
+                            selectedDetail?.windDirection ||
+                            "-"}
+                      </span>
+                    </li>
+                    <li>
+                      <span className="k">풍속</span>
+                      <span className="v">
+                        {loadingDetail
+                          ? "로딩 중..."
+                          : selectedDetail?.wind_speed || selectedDetail?.windSpeed
+                          ? `${selectedDetail.wind_speed || selectedDetail.windSpeed}m/s`
+                          : "-"}
+                      </span>
                     </li>
                   </ul>
 
