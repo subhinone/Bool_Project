@@ -4,7 +4,7 @@
 // 백엔드 서버 주소 (환경에 따라 변경)
 // NestJS Backend: http://localhost:3000/api
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE || 'http://http://3.34.148.22:3000//api';
+  import.meta.env.VITE_API_BASE || 'http://3.34.148.22:3000//api';
 
 // API 요청을 위한 공통 함수
 const apiRequest = async (endpoint, options = {}) => {
