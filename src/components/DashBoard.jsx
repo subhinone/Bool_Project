@@ -10,7 +10,6 @@ import {
   updateFireStatus,
   getToken,
   getFireById,
-  getUserProfile,
 } from '../utils/api';
 
 // Base64 이미지를 표시 가능한 URL로 변환하는 헬퍼 함수
@@ -123,10 +122,6 @@ export default function Dashboard() {
   // 선택된 신고의 상세 정보 (날씨 정보 포함)
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
-
-  // 선택된 신고자의 프로필 정보
-  const [userProfile, setUserProfile] = useState(null);
-  const [loadingUserProfile, setLoadingUserProfile] = useState(false);
 
   const loadReports = useCallback(async () => {
     try {
@@ -244,25 +239,6 @@ export default function Dashboard() {
     }
   }, []);
 
-  // 사용자 프로필 로드 (전화번호 포함)
-  const loadUserProfile = useCallback(async (userId) => {
-    if (!userId) {
-      setUserProfile(null);
-      return;
-    }
-
-    setLoadingUserProfile(true);
-    try {
-      const profile = await getUserProfile(userId);
-      console.log(`[DashBoard] 사용자 프로필 로드 성공:`, profile);
-      setUserProfile(profile);
-    } catch (err) {
-      console.error(`[DashBoard] userId ${userId} 프로필 로드 실패:`, err);
-      setUserProfile(null);
-    } finally {
-      setLoadingUserProfile(false);
-    }
-  }, []);
 
   // 탭 변경 시 데이터 다시 로드 및 페이지 리셋
   useEffect(() => {
@@ -287,16 +263,14 @@ export default function Dashboard() {
     }
   }, [selectedId, loadFireDetail]);
 
-  // 선택된 신고가 변경되면 신고자 프로필 및 내역 로드
+  // 선택된 신고가 변경되면 신고자 내역 로드
   useEffect(() => {
     if (selected && selected.reporter && selected.reporter.userId) {
       loadReporterHistory(selected.reporter.userId);
-      loadUserProfile(selected.reporter.userId);
     } else {
       setReporterHistory([]);
-      setUserProfile(null);
     }
-  }, [selected, loadReporterHistory, loadUserProfile]);
+  }, [selected, loadReporterHistory]);
 
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -695,15 +669,13 @@ export default function Dashboard() {
                 <div className="fd-field">
                   <div className="label">이름</div>
                   <div className="value">
-                    {userProfile?.name || selected.reporter.name}
+                    {selected.reporter.name}
                   </div>
                 </div>
                 <div className="fd-field">
                   <div className="label">전화번호</div>
                   <div className="value">
-                    {loadingUserProfile
-                      ? '로딩 중...'
-                      : userProfile?.phone || selected.reporter.phone}
+                    {selected.reporter.phone || '-'}
                   </div>
                 </div>
                 <div className="fd-field">
