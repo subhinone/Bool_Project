@@ -61,6 +61,65 @@ const formatDateTime = (dateString) => {
   return `${year}.${month}.${day} ${hours}:${minutes}`;
 };
 
+// 신고 신선도에 따른 배경색 계산 (30분 이내 = 새로운 신고)
+const getNewReportBackgroundColor = (minutesAgo) => {
+  if (minutesAgo > 30) return 'transparent';
+  // 0분: opacity 0.2 (진한 연빨강)
+  // 30분: opacity 0 (투명)
+  const opacity = Math.max(0, 0.2 - (minutesAgo / 30) * 0.2);
+  return `rgba(255, 100, 100, ${opacity})`;
+};
+
+// 알림 소리 재생 (Web Audio API 사용)
+const playNotificationSound = () => {
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    // 긴급 경보음 (높은 음과 낮은 음 반복)
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.5);
+  } catch (err) {
+    console.error('알림 소리 재생 실패:', err);
+  }
+};
+
+// 브라우저 알림 표시
+const showBrowserNotification = (count, location) => {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const notification = new Notification('🚨 새로운 화재 신고', {
+      body: `${location}에서 ${count}건의 새로운 화재 신고가 접수되었습니다.`,
+      icon: '/119_bool.png',
+      badge: '/119_bool.png',
+      requireInteraction: false,
+      silent: false,
+    });
+
+    setTimeout(() => notification.close(), 5000);
+  }
+};
+
+// 브라우저 알림 권한 요청
+const requestNotificationPermission = async () => {
+  if ('Notification' in window && Notification.permission === 'default') {
+    try {
+      await Notification.requestPermission();
+    } catch (err) {
+      console.error('알림 권한 요청 실패:', err);
+    }
+  }
+};
+
 // 백엔드 데이터를 웹앱 형식으로 변환
 const transformReport = (report) => {
   const createdAt = new Date(report.created_at);
@@ -123,15 +182,41 @@ export default function Dashboard() {
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const loadReports = useCallback(async () => {
+  // 자동 새로고침을 위한 상태
+  const [previousReportIds, setPreviousReportIds] = useState(new Set());
+
+  const loadReports = useCallback(async (isAutoRefresh = false) => {
     try {
-      setLoading(true);
+      // 자동 새로고침일 때는 로딩 화면을 표시하지 않음
+      if (!isAutoRefresh) {
+        setLoading(true);
+      }
       setError(null);
 
       if (activeTab === 'active') {
         const response = await getActiveFires();
         const reports = response.reports || [];
         const transformed = reports.map(transformReport);
+
+        // 새로운 신고 감지
+        if (isAutoRefresh) {
+          const currentIds = new Set(transformed.map(r => r.id));
+          const newReports = transformed.filter(r => !previousReportIds.has(r.id));
+
+          if (newReports.length > 0) {
+            console.log(`🚨 새로운 신고 ${newReports.length}건 감지!`);
+
+            // 알림 소리 재생
+            playNotificationSound();
+
+            // 브라우저 알림 표시
+            const firstLocation = newReports[0].location || '알 수 없는 위치';
+            showBrowserNotification(newReports.length, firstLocation);
+          }
+
+          setPreviousReportIds(currentIds);
+        }
+
         setList(transformed);
 
         if (transformed.length > 0 && !selectedId) {
@@ -162,9 +247,11 @@ export default function Dashboard() {
       setList([]);
       setSelectedId(null);
     } finally {
-      setLoading(false);
+      if (!isAutoRefresh) {
+        setLoading(false);
+      }
     }
-  }, [activeTab, selectedId, navigate]);
+  }, [activeTab, selectedId, navigate, previousReportIds]);
 
   useEffect(() => {
     // 인증 토큰 확인
@@ -178,6 +265,9 @@ export default function Dashboard() {
     // 로그인 시 저장된 소방서 정보 가져오기
     const savedStationName = localStorage.getItem('stationName') || '소방서';
     setStationName(savedStationName);
+
+    // 브라우저 알림 권한 요청
+    requestNotificationPermission();
 
     // 화재 신고 목록 로드
     loadReports();
@@ -277,6 +367,18 @@ export default function Dashboard() {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // 자동 새로고침 (30초 간격, active 탭에서만)
+  useEffect(() => {
+    if (activeTab !== 'active') return;
+
+    const intervalId = setInterval(() => {
+      console.log('🔄 자동 새로고침 실행...');
+      loadReports(true); // isAutoRefresh = true
+    }, 30000); // 30초
+
+    return () => clearInterval(intervalId);
+  }, [activeTab, loadReports]);
 
   const filtered = useMemo(() => {
     let result = list;
@@ -403,6 +505,10 @@ export default function Dashboard() {
                       selectedId === f.id ? 'is-active' : ''
                     }`}
                     onClick={() => setSelectedId(f.id)}
+                    style={{
+                      backgroundColor: getNewReportBackgroundColor(f.minutesAgo),
+                      transition: 'background-color 0.5s ease',
+                    }}
                   >
                     <div className="fd-list-title">{f.title}</div>
                     <div className="fd-list-meta">
