@@ -61,6 +61,30 @@ const formatDateTime = (dateString) => {
   return `${year}.${month}.${day} ${hours}:${minutes}`;
 };
 
+// 화재 타입을 한글로 변환
+const getFireTypeLabel = (fireType) => {
+  switch (fireType?.toLowerCase()) {
+    case 'wildfire':
+      return '산불화재';
+    case 'urbanfire':
+      return '도심화재';
+    default:
+      return '화재';
+  }
+};
+
+// 화재 타입에 따른 이모지 반환
+const getFireTypeEmoji = (fireType) => {
+  switch (fireType?.toLowerCase()) {
+    case 'wildfire':
+      return '🌲';
+    case 'urbanfire':
+      return '🏙️';
+    default:
+      return '🔥';
+  }
+};
+
 // 신고 신선도에 따른 배경색 계산 (30분 이내 = 새로운 신고)
 const getNewReportBackgroundColor = (minutesAgo) => {
   if (minutesAgo > 30) return 'transparent';
@@ -73,7 +97,8 @@ const getNewReportBackgroundColor = (minutesAgo) => {
 // 알림 소리 재생 (Web Audio API 사용)
 const playNotificationSound = () => {
   try {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const audioContext = new (window.AudioContext ||
+      window.webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
@@ -85,7 +110,10 @@ const playNotificationSound = () => {
     oscillator.type = 'sine';
 
     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.01,
+      audioContext.currentTime + 0.5
+    );
 
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.5);
@@ -153,9 +181,8 @@ const transformReport = (report) => {
       reportId: report.id.toString(),
       userId: report.user_id,
     },
-    memo: `${report.fire_type || 'unknown'} 화재 (신뢰도: ${Math.round(
-      report.confidence || 0
-    )}%)`,
+    fireType: report.fire_type || 'unknown',
+    confidence: Math.round(report.confidence || 0),
     // 원본 데이터도 함께 저장 (디버깅용)
     _raw: report,
   };
@@ -185,73 +212,78 @@ export default function Dashboard() {
   // 자동 새로고침을 위한 상태
   const [previousReportIds, setPreviousReportIds] = useState(new Set());
 
-  const loadReports = useCallback(async (isAutoRefresh = false) => {
-    try {
-      // 자동 새로고침일 때는 로딩 화면을 표시하지 않음
-      if (!isAutoRefresh) {
-        setLoading(true);
-      }
-      setError(null);
+  const loadReports = useCallback(
+    async (isAutoRefresh = false) => {
+      try {
+        // 자동 새로고침일 때는 로딩 화면을 표시하지 않음
+        if (!isAutoRefresh) {
+          setLoading(true);
+        }
+        setError(null);
 
-      if (activeTab === 'active') {
-        const response = await getActiveFires();
-        const reports = response.reports || [];
-        const transformed = reports.map(transformReport);
+        if (activeTab === 'active') {
+          const response = await getActiveFires();
+          const reports = response.reports || [];
+          const transformed = reports.map(transformReport);
 
-        // 새로운 신고 감지
-        if (isAutoRefresh) {
-          const currentIds = new Set(transformed.map(r => r.id));
-          const newReports = transformed.filter(r => !previousReportIds.has(r.id));
+          // 새로운 신고 감지
+          if (isAutoRefresh) {
+            const currentIds = new Set(transformed.map((r) => r.id));
+            const newReports = transformed.filter(
+              (r) => !previousReportIds.has(r.id)
+            );
 
-          if (newReports.length > 0) {
-            console.log(`🚨 새로운 신고 ${newReports.length}건 감지!`);
+            if (newReports.length > 0) {
+              console.log(`🚨 새로운 신고 ${newReports.length}건 감지!`);
 
-            // 알림 소리 재생
-            playNotificationSound();
+              // 알림 소리 재생
+              playNotificationSound();
 
-            // 브라우저 알림 표시
-            const firstLocation = newReports[0].location || '알 수 없는 위치';
-            showBrowserNotification(newReports.length, firstLocation);
+              // 브라우저 알림 표시
+              const firstLocation = newReports[0].location || '알 수 없는 위치';
+              showBrowserNotification(newReports.length, firstLocation);
+            }
+
+            setPreviousReportIds(currentIds);
           }
 
-          setPreviousReportIds(currentIds);
+          setList(transformed);
+
+          if (transformed.length > 0 && !selectedId) {
+            setSelectedId(transformed[0].id);
+          }
+        } else {
+          const response = await getCompletedFires();
+          const reports = response.reports || [];
+          const transformed = reports.map(transformReport);
+          setList(transformed);
+
+          if (transformed.length > 0 && !selectedId) {
+            setSelectedId(transformed[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('[DashBoard] 화재 신고 로드 실패:', err);
+
+        // 401 에러면 로그인 페이지로 리다이렉트
+        if (err.status === 401) {
+          alert('인증이 만료되었습니다. 다시 로그인해주세요.');
+          navigate('/login');
+          return;
         }
 
-        setList(transformed);
-
-        if (transformed.length > 0 && !selectedId) {
-          setSelectedId(transformed[0].id);
-        }
-      } else {
-        const response = await getCompletedFires();
-        const reports = response.reports || [];
-        const transformed = reports.map(transformReport);
-        setList(transformed);
-
-        if (transformed.length > 0 && !selectedId) {
-          setSelectedId(transformed[0].id);
+        setError(err.message || '데이터를 불러올 수 없습니다.');
+        // 에러 발생 시 빈 목록 표시
+        setList([]);
+        setSelectedId(null);
+      } finally {
+        if (!isAutoRefresh) {
+          setLoading(false);
         }
       }
-    } catch (err) {
-      console.error('[DashBoard] 화재 신고 로드 실패:', err);
-
-      // 401 에러면 로그인 페이지로 리다이렉트
-      if (err.status === 401) {
-        alert('인증이 만료되었습니다. 다시 로그인해주세요.');
-        navigate('/login');
-        return;
-      }
-
-      setError(err.message || '데이터를 불러올 수 없습니다.');
-      // 에러 발생 시 빈 목록 표시
-      setList([]);
-      setSelectedId(null);
-    } finally {
-      if (!isAutoRefresh) {
-        setLoading(false);
-      }
-    }
-  }, [activeTab, selectedId, navigate, previousReportIds]);
+    },
+    [activeTab, selectedId, navigate, previousReportIds]
+  );
 
   useEffect(() => {
     // 인증 토큰 확인
@@ -328,7 +360,6 @@ export default function Dashboard() {
       setLoadingDetail(false);
     }
   }, []);
-
 
   // 탭 변경 시 데이터 다시 로드 및 페이지 리셋
   useEffect(() => {
@@ -506,7 +537,9 @@ export default function Dashboard() {
                     }`}
                     onClick={() => setSelectedId(f.id)}
                     style={{
-                      backgroundColor: getNewReportBackgroundColor(f.minutesAgo),
+                      backgroundColor: getNewReportBackgroundColor(
+                        f.minutesAgo
+                      ),
                       transition: 'background-color 0.5s ease',
                     }}
                   >
@@ -713,7 +746,22 @@ export default function Dashboard() {
                       />
                     </div>
                   </div>
-                  <div className="fd-memo">{selected.memo}</div>
+                  <div className="fd-fire-type-container">
+                    <div className="fd-fire-type-badge">
+                      <span className="fd-fire-type-emoji">
+                        {getFireTypeEmoji(selected.fireType)}
+                      </span>
+                      <span className="fd-fire-type-label">
+                        {getFireTypeLabel(selected.fireType)}
+                      </span>
+                    </div>
+                    <div className="fd-fire-confidence">
+                      <span className="fd-fire-confidence-label">위험도</span>
+                      <span className="fd-fire-confidence-value">
+                        {selected.confidence}%
+                      </span>
+                    </div>
+                  </div>
 
                   <div className="fd-actions">
                     <button
@@ -774,15 +822,11 @@ export default function Dashboard() {
                 </div>
                 <div className="fd-field">
                   <div className="label">이름</div>
-                  <div className="value">
-                    {selected.reporter.name}
-                  </div>
+                  <div className="value">{selected.reporter.name}</div>
                 </div>
                 <div className="fd-field">
                   <div className="label">전화번호</div>
-                  <div className="value">
-                    {selected.reporter.phone || '-'}
-                  </div>
+                  <div className="value">{selected.reporter.phone || '-'}</div>
                 </div>
                 <div className="fd-field">
                   <div className="label">신고 내역</div>
