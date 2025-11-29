@@ -229,7 +229,18 @@ export default function Dashboard() {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   // 자동 새로고침을 위한 상태
-  const [previousReportIds, setPreviousReportIds] = useState(new Set());
+  const [previousReportIds, setPreviousReportIds] = useState(() => {
+    // localStorage에서 이전 신고 ID 목록 불러오기
+    try {
+      const saved = localStorage.getItem('previousReportIds');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  // 마지막 알림 시간 (중복 알림 방지용)
+  const [lastNotificationTime, setLastNotificationTime] = useState(0);
 
   const loadReports = useCallback(
     async (isAutoRefresh = false) => {
@@ -253,17 +264,34 @@ export default function Dashboard() {
             );
 
             if (newReports.length > 0) {
-              console.log(`🚨 새로운 신고 ${newReports.length}건 감지!`);
+              const now = Date.now();
+              // 마지막 알림으로부터 10초 이상 경과했을 때만 알림 재생
+              const shouldPlayNotification = now - lastNotificationTime > 10000;
 
-              // 알림 소리 재생
-              playNotificationSound();
+              if (shouldPlayNotification) {
+                console.log(`🚨 새로운 신고 ${newReports.length}건 감지!`);
 
-              // 브라우저 알림 표시
-              const firstLocation = newReports[0].location || '알 수 없는 위치';
-              showBrowserNotification(newReports.length, firstLocation);
+                // 알림 소리 재생
+                playNotificationSound();
+
+                // 브라우저 알림 표시
+                const firstLocation = newReports[0].location || '알 수 없는 위치';
+                showBrowserNotification(newReports.length, firstLocation);
+
+                // 마지막 알림 시간 업데이트
+                setLastNotificationTime(now);
+              } else {
+                console.log(`⏭️ 새로운 신고 ${newReports.length}건 감지 (알림 스킵: ${Math.round((10000 - (now - lastNotificationTime)) / 1000)}초 후 재생 가능)`);
+              }
             }
 
+            // previousReportIds 업데이트 및 localStorage에 저장
             setPreviousReportIds(currentIds);
+            try {
+              localStorage.setItem('previousReportIds', JSON.stringify([...currentIds]));
+            } catch (err) {
+              console.error('previousReportIds 저장 실패:', err);
+            }
           }
 
           setList(transformed);
@@ -301,7 +329,7 @@ export default function Dashboard() {
         }
       }
     },
-    [activeTab, selectedId, navigate, previousReportIds]
+    [activeTab, selectedId, navigate, previousReportIds, lastNotificationTime]
   );
 
   useEffect(() => {
