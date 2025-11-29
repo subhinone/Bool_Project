@@ -60,6 +60,25 @@ const formatDateTime = (dateString) => {
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${year}.${month}.${day} ${hours}:${minutes}`;
 };
+const calcFireRaw = (windSpeed, humidity) => {
+  if (windSpeed == null || humidity == null) return null;
+
+  const ws = Number(windSpeed);
+  const reh = Number(humidity);
+
+  if (Number.isNaN(ws) || Number.isNaN(reh)) return null;
+
+  return 2 * ws - 0.2 * reh;
+};
+
+const getFireRiskLevel = (fireRaw) => {
+  if (fireRaw == null) return '-';
+  if (fireRaw <= -10) return '매우 낮음';
+  if (fireRaw <= -5)  return '낮음';
+  if (fireRaw <= 5)   return '보통';
+  if (fireRaw <= 12)  return '높음';
+  return '매우 높음';
+};
 
 // 화재 타입을 한글로 변환
 const getFireTypeLabel = (fireType) => {
@@ -375,6 +394,21 @@ export default function Dashboard() {
   const selected = useMemo(
     () => list.find((f) => f.id === selectedId) ?? list[0],
     [list, selectedId]
+  );
+
+  const fireRaw = useMemo(() => {
+    if (!selectedDetail) return null;
+
+  const windSpeed =
+    selectedDetail.wind_speed ?? selectedDetail.windSpeed ?? null;
+  const humidity = selectedDetail.humidity ?? null;
+
+  return calcFireRaw(windSpeed, humidity);
+}, [selectedDetail]);
+
+  const fireRiskLevel = useMemo(
+    () => getFireRiskLevel(fireRaw),
+    [fireRaw]
   );
 
   // 선택된 신고가 변경되면 상세 정보 로드
@@ -732,20 +766,20 @@ export default function Dashboard() {
                           : '-'}
                       </span>
                     </li>
+                    <li>
+                      <span className="k">화재 위험도</span>
+                      <span className="v">
+                       {loadingDetail
+                         ? '로딩 중...'
+                         : fireRaw == null
+                         ? '계산 불가'
+                         : fireRiskLevel}
+                      </span>
+                  </li>
                   </ul>
 
-                  <div className="fd-risk">
-                    <div className="fd-risk-label">
-                      <span>위험도</span>
-                      <strong>{selected.risk}%</strong>
-                    </div>
-                    <div className="fd-risk-bar">
-                      <div
-                        className="fd-risk-fill"
-                        style={{ width: `${selected.risk}%` }}
-                      />
-                    </div>
-                  </div>
+                  
+                
                   <div className="fd-fire-type-container">
                     <div className="fd-fire-type-badge">
                       <span className="fd-fire-type-emoji">
@@ -756,7 +790,7 @@ export default function Dashboard() {
                       </span>
                     </div>
                     <div className="fd-fire-confidence">
-                      <span className="fd-fire-confidence-label">위험도</span>
+                      <span className="fd-fire-confidence-label">신뢰도</span>
                       <span className="fd-fire-confidence-value">
                         {selected.confidence}%
                       </span>
